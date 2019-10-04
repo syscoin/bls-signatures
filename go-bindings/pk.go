@@ -5,7 +5,6 @@ package blschia
 // #include <stdlib.h>
 // #include "pk.h"
 import "C"
-import "unsafe"
 
 type GoPublicKey struct {
 	pk C.PublicKey
@@ -13,7 +12,7 @@ type GoPublicKey struct {
 
 // Free releases memory allocated by the pk
 func (pk GoPublicKey) Free() {
-	C.free(unsafe.Pointer(pk.pk))
+	C.PublicKeyFree(pk.pk)
 }
 
 // Serialize returns a byte slice which represents the byte value of the public

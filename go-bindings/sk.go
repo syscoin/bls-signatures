@@ -6,7 +6,6 @@ package blschia
 // #include <stdlib.h>
 // #include "sk.h"
 import "C"
-import "unsafe"
 import "runtime"
 
 type GoSecretKey struct {
@@ -39,7 +38,7 @@ func SecretKeyFromBytes(data []byte, modOrder bool) GoSecretKey {
 
 // Free releases memory allocated by the sk
 func (sk GoSecretKey) Free() {
-	C.free(unsafe.Pointer(sk.sk))
+	C.SecretKeyFree(sk.sk)
 }
 
 // Serialize returns a byte slice which represents the byte value of the secret
@@ -47,7 +46,7 @@ func (sk GoSecretKey) Free() {
 func (sk GoSecretKey) Serialize() []byte {
 	// returns a void*, e.g. unsafe.Pointer
 	ptr := C.SKSerialize(sk.sk)
-	defer C.free(ptr)
+	defer C.SecFree(ptr)
 	val := C.GoBytes(ptr, C.int(C.SECRET_KEY_SIZE))
 	return val
 }

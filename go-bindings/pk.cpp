@@ -12,3 +12,9 @@ void* PKSerialize(PublicKey pk) {
 
     return (void*)buffer;
 }
+
+// PublicKeyFree frees the memory allocated for the public key
+void PublicKeyFree(PublicKey pk) {
+    bls::PublicKey* key = (bls::PublicKey*)pk;
+    delete key;
+}

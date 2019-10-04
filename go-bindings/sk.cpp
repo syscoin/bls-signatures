@@ -17,9 +17,7 @@ SecretKey SecretKeyFromBytes(void *p, bool modOrder) {
     // printf("sizeof(bls::PrivateKey) = %ld\n", sizeof(bls::PrivateKey));
 
     // caller is responsible for freeing this
-    void* skPtr = (bls::PrivateKey*)malloc(bls::PrivateKey::PRIVATE_KEY_SIZE);
-    bls::PrivateKey sk = bls::PrivateKey::FromBytes((uint8_t *)p, modOrder);
-    memmove(skPtr, (const void*)&sk, bls::PrivateKey::PRIVATE_KEY_SIZE);
+    bls::PrivateKey* skPtr = new bls::PrivateKey(bls::PrivateKey::FromBytes((uint8_t*)p, modOrder));
 
     // debug, print bytes of key using ptr like in SKserialize
     bls::PrivateKey* kPtr = (bls::PrivateKey*)skPtr;
@@ -59,7 +57,7 @@ void SecFree(void* p) {
 // SecretKeyFree frees the memory allocated for the secret key
 void SecretKeyFree(SecretKey sk) {
     bls::PrivateKey* key = (bls::PrivateKey*)sk;
-    free(key);
+    delete key;
 }
 
 // Return the public key
@@ -67,8 +65,7 @@ PublicKey SKGetPublicKey(SecretKey sk) {
     bls::PrivateKey* key = (bls::PrivateKey*)sk;
 
     // caller is responsible for freeing this
-    void* pkPtr = (uint8_t*)malloc(bls::PublicKey::PUBLIC_KEY_SIZE);
-    bls::PublicKey pk = key->GetPublicKey();
-    memmove(pkPtr, (const void*)&pk, bls::PublicKey::PUBLIC_KEY_SIZE);
+    bls::PublicKey* pkPtr = new bls::PublicKey(key->GetPublicKey());
+
     return pkPtr;
 }
