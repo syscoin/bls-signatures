@@ -267,19 +267,17 @@ while [ $# != 0 ]; do
             CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_INSTALL_DOCDIR=$(quote "$2")"; shift;;
 
         "NM="*)
-            CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_NM=$(quote "/usr/bin/${1#*=}")";;
+            CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_NM=/usr/bin/${1#*=}";;
         "AR="*)
-            CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_AR=$(quote "/usr/bin/${1#*=}")";;
+            CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_AR=/usr/bin/${1#*=}";;
         "RANLIB="*)
-            CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_RANLIB=$(quote "/usr/bin/${1#*=}")";;
-        "AR="*)
-            CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_AR=$(quote "/usr/bin/${1#*=}")";;
+            CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_RANLIB=/usr/bin/${1#*=}";;
         "ARFLAGS="*)
             CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_STATIC_LINKER_FLAGS=$(quote "${1#*=}")";; 
         "CC="*)
-            CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_C_COMPILER=$(quote "/usr/bin/${1#*=}")";;
+            CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_C_COMPILER=/usr/bin/${1#*=}";;
         "CXX="*)
-            CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_CXX_COMPILER=$(quote "/usr/bin/${1#*=}")";;
+            CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_CXX_COMPILER=/usr/bin/${1#*=}";;
         "CFLAGS="*)
             CFLAGS="${1#*=}";;
         "CXXFLAGS="*)
