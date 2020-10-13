@@ -188,17 +188,13 @@ while [ $# != 0 ]; do
             HOST="${1#*=}"
             case $HOST in
                 *mingw*)
-                    CMAKE_ARGS="$CMAKE_ARGS -DOPSYS=WINDOWS -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_SHARED_LIBRARY_LINK_C_FLAGS='' -DCMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS=''"
-                    ;;
+                    CMAKE_ARGS="$CMAKE_ARGS -DOPSYS=WINDOWS -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_SHARED_LIBRARY_LINK_C_FLAGS='' -DCMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS=''";;
                 *darwin*)
-                    CMAKE_ARGS="$CMAKE_ARGS -DOPSYS=MACOSX -DCMAKE_SYSTEM_NAME=Darwin"
-                    ;;
+                    CMAKE_ARGS="$CMAKE_ARGS -DOPSYS=MACOSX -DCMAKE_SYSTEM_NAME=Darwin";;
                 *android*)
-                    CMAKE_ARGS="$CMAKE_ARGS -DOPSYS=DROID -DCMAKE_SYSTEM_NAME=Android"
-                    ;;
+                    CMAKE_ARGS="$CMAKE_ARGS -DOPSYS=DROID -DCMAKE_SYSTEM_NAME=Android";;
                 *linux*)
-                    CMAKE_ARGS="$CMAKE_ARGS -DOPSYS=LINUX -DCMAKE_SYSTEM_NAME=Linux"
-                    ;;
+                    CMAKE_ARGS="$CMAKE_ARGS -DOPSYS=LINUX -DCMAKE_SYSTEM_NAME=Linux";;
             esac
             ;;
         "--prefix="*)
@@ -273,7 +269,6 @@ while [ $# != 0 ]; do
                 *mingw*);;
                 *darwin*)
                     CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_AR=/usr/bin/${1#*=}";;
-                    ;;
                 *android*);;
                 *linux*);;
             esac
@@ -283,7 +278,6 @@ while [ $# != 0 ]; do
                 *mingw*);;
                 *darwin*)
                     CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_RANLIB=/usr/bin/${1#*=}";;
-                    ;;
                 *android*);;
                 *linux*);;
             esac
@@ -293,7 +287,6 @@ while [ $# != 0 ]; do
                 *mingw*);;
                 *darwin*)
                     CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_STATIC_LINKER_FLAGS=$(quote "${1#*=}")";; 
-                    ;;
                 *android*);;
                 *linux*);;
             esac
