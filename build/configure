@@ -269,11 +269,35 @@ while [ $# != 0 ]; do
         "NM="*)
             CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_NM=/usr/bin/${1#*=}";;
         "AR="*)
-            CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_AR=/usr/bin/${1#*=}";;
+            case $HOST in
+                *mingw*);;
+                *darwin*)
+                    CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_AR=/usr/bin/${1#*=}";;
+                    ;;
+                *android*);;
+                *linux*);;
+            esac
+            ;;
         "RANLIB="*)
-            CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_RANLIB=/usr/bin/${1#*=}";;
+            case $HOST in
+                *mingw*);;
+                *darwin*)
+                    CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_RANLIB=/usr/bin/${1#*=}";;
+                    ;;
+                *android*);;
+                *linux*);;
+            esac
+            ;;
         "ARFLAGS="*)
-            CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_STATIC_LINKER_FLAGS=$(quote "${1#*=}")";; 
+            case $HOST in
+                *mingw*);;
+                *darwin*)
+                    CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_STATIC_LINKER_FLAGS=$(quote "${1#*=}")";; 
+                    ;;
+                *android*);;
+                *linux*);;
+            esac
+            ;;
         "CC="*)
             CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_C_COMPILER=/usr/bin/${1#*=}";;
         "CXX="*)
