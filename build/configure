@@ -45,7 +45,7 @@ quote() {
 
 extract_var_string() {
     VAR_NAME=$1
-    VAR_NAME=$(echo $1 | sed -e 's/[ \t]*$//')
+    VAR_NAME=$(echo $1 | sed -e 's/[ ]*$//')
     if [ "x$2" != "x" ]; then
         VAR_VALUE=$2
     else
@@ -183,7 +183,8 @@ EOF
 while [ $# != 0 ]; do
     case "$1" in
 	    "--cache-file="*);;
-	    "--srcdir="*);;
+	    "--srcdir="*)
+            TOP_SRCDIR="${1#*=}";;
         "--host="*)
             HOST="${1#*=}"
             case $HOST in
@@ -331,7 +332,7 @@ while [ $# != 0 ]; do
         "--disable-"*)
             set_config_var "$1"
             ;;
-
+        "--without-"*);;
         "--with-"*)
             name=$(echo "${1#--with-}" | awk '{split($1,v,"="); print v[1]}')
             case "${1}" in
@@ -373,4 +374,4 @@ if [ "x${CXXFLAGS}" != "x" ]; then
     CMAKE_ARGS="$CMAKE_ARGS -DCMAKE_CXX_FLAGS=$(quote "$CXXFLAGS")"
 fi
 
-eval "${CMAKE_CMD}" "${TOP_SRCDIR}" -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" -DCMAKE_INSTALL_PREFIX="${PREFIX}" -DCMAKE_INSTALL_LIBDIR="${LIBDIR}" ${CMAKE_ARGS} ..
+eval "${CMAKE_CMD}" "${TOP_SRCDIR}" -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" -DCMAKE_INSTALL_PREFIX="${PREFIX}" -DCMAKE_INSTALL_LIBDIR="${LIBDIR}" ${CMAKE_ARGS} "${TOP_SRCDIR}/../"
