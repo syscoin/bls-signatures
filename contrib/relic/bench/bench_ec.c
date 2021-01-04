@@ -1,23 +1,24 @@
 /*
  * RELIC is an Efficient LIbrary for Cryptography
- * Copyright (C) 2007-2017 RELIC Authors
+ * Copyright (C) 2007-2020 RELIC Authors
  *
  * This file is part of RELIC. RELIC is legal property of its developers,
  * whose names are not listed here. Please refer to the COPYRIGHT file
  * for contact information.
  *
- * RELIC is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * RELIC is free software; you can redistribute it and/or modify it under the
+ * terms of the version 2.1 (or later) of the GNU Lesser General Public License
+ * as published by the Free Software Foundation; or version 2.0 of the Apache
+ * License as published by the Apache Software Foundation. See the LICENSE files
+ * for more details.
  *
- * RELIC is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- * Lesser General Public License for more details.
+ * RELIC is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+ * A PARTICULAR PURPOSE. See the LICENSE files for more details.
  *
- * You should have received a copy of the GNU Lesser General Public License
- * along with RELIC. If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public or the
+ * Apache License along with RELIC. If not, see <https://www.gnu.org/licenses/>
+ * or <https://www.apache.org/licenses/>.
  */
 
 /**
@@ -30,8 +31,8 @@
 
 #include <stdio.h>
 
-#include <relic.h>
-#include <relic_bench.h>
+#include "relic.h"
+#include "relic_bench.h"
 
 static void memory(void) {
 	ec_t a[BENCH];
@@ -53,7 +54,7 @@ static void memory(void) {
 
 static void util(void) {
 	ec_t p, q;
-	uint8_t bin[2 * FC_BYTES + 1];
+	uint8_t bin[2 * RLC_FC_BYTES + 1];
 	int l;
 
 	ec_null(p);
@@ -107,9 +108,14 @@ static void util(void) {
 	}
 	BENCH_END;
 
-	BENCH_BEGIN("ec_is_valid") {
+	BENCH_BEGIN("ec_blind") {
+		BENCH_ADD(ec_blind(p, p));
+	}
+	BENCH_END;
+
+	BENCH_BEGIN("ec_on_curve") {
 		ec_rand(p);
-		BENCH_ADD(ec_is_valid(p));
+		BENCH_ADD(ec_on_curve(p));
 	} BENCH_END;
 
 	BENCH_BEGIN("ec_size_bin (0)") {
@@ -153,13 +159,13 @@ static void util(void) {
 }
 
 static void arith(void) {
-	ec_t p, q, r, t[RELIC_EC_TABLE];
+	ec_t p, q, r, t[RLC_EC_TABLE];
 	bn_t k, l, n;
 
 	ec_null(p);
 	ec_null(q);
 	ec_null(r);
-	for (int i = 0; i < RELIC_EC_TABLE; i++) {
+	for (int i = 0; i < RLC_EC_TABLE; i++) {
 		ec_null(t[i]);
 	}
 
@@ -223,7 +229,7 @@ static void arith(void) {
 	}
 	BENCH_END;
 
-	for (int i = 0; i < RELIC_EC_TABLE; i++) {
+	for (int i = 0; i < RLC_EC_TABLE; i++) {
 		ec_new(t[i]);
 	}
 
@@ -277,13 +283,13 @@ static void arith(void) {
 	bn_free(k);
 	bn_free(l);
 	bn_free(n);
-	for (int i = 0; i < RELIC_EC_TABLE; i++) {
+	for (int i = 0; i < RLC_EC_TABLE; i++) {
 		ec_free(t[i]);
 	}
 }
 
 int main(void) {
-	if (core_init() != STS_OK) {
+	if (core_init() != RLC_OK) {
 		core_clean();
 		return 1;
 	}
@@ -291,8 +297,8 @@ int main(void) {
 	conf_print();
 	util_banner("Benchmarks for the EC module:", 0);
 
-	if (ec_param_set_any() != STS_OK) {
-		THROW(ERR_NO_CURVE);
+	if (ec_param_set_any() != RLC_OK) {
+		RLC_THROW(ERR_NO_CURVE);
 		core_clean();
 		return 0;
 	}
