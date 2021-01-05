@@ -1,24 +1,23 @@
 /*
  * RELIC is an Efficient LIbrary for Cryptography
- * Copyright (C) 2007-2020 RELIC Authors
+ * Copyright (C) 2007-2017 RELIC Authors
  *
  * This file is part of RELIC. RELIC is legal property of its developers,
  * whose names are not listed here. Please refer to the COPYRIGHT file
  * for contact information.
  *
- * RELIC is free software; you can redistribute it and/or modify it under the
- * terms of the version 2.1 (or later) of the GNU Lesser General Public License
- * as published by the Free Software Foundation; or version 2.0 of the Apache
- * License as published by the Apache Software Foundation. See the LICENSE files
- * for more details.
+ * RELIC is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * RELIC is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the LICENSE files for more details.
+ * RELIC is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public or the
- * Apache License along with RELIC. If not, see <https://www.gnu.org/licenses/>
- * or <https://www.apache.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with RELIC. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -35,7 +34,7 @@
 #include <malloc.h>
 #endif
 
-#include "relic_core.h"
+#include <relic_core.h>
 
 /*============================================================================*/
 /* Public definitions                                                         */
@@ -43,9 +42,9 @@
 
 void bn_init(bn_t a, int digits) {
 #if ALLOC == DYNAMIC
-	if (digits % RLC_BN_SIZE != 0) {
+	if (digits % BN_SIZE != 0) {
 		/* Pad the number of digits to a multiple of the block. */
-		digits += (RLC_BN_SIZE - digits % RLC_BN_SIZE);
+		digits += (BN_SIZE - digits % BN_SIZE);
 	}
 
 	if (a != NULL) {
@@ -57,30 +56,38 @@ void bn_init(bn_t a, int digits) {
 #else
 		int r = posix_memalign((void **)&a->dp, ALIGN, digits * sizeof(dig_t));
 		if (r == ENOMEM) {
-			RLC_THROW(ERR_NO_MEMORY);
+			THROW(ERR_NO_MEMORY);
 		}
 		if (r == EINVAL) {
-			RLC_THROW(ERR_NO_VALID);
+			THROW(ERR_NO_VALID);
 		}
 #endif
 	}
 
 	if (a->dp == NULL) {
 		free(a);
-		RLC_THROW(ERR_NO_MEMORY);
+		THROW(ERR_NO_MEMORY);
 	}
 #else
 	/* Verify if the number of digits is sane. */
-	if (digits > RLC_BN_SIZE) {
-		RLC_THROW(ERR_NO_PRECI);
+	if (digits > BN_SIZE) {
+		THROW(ERR_NO_PRECI);
 	} else {
-		digits = RLC_BN_SIZE;
+		digits = BN_SIZE;
 	}
+#if ALLOC == STATIC
+	if (a != NULL) {
+		a->dp = pool_get();
+		if (a->dp == NULL) {
+			THROW(ERR_NO_MEMORY);
+		}
+	}
+#endif
 #endif
 	if (a != NULL) {
 		a->used = 0;
 		a->alloc = digits;
-		a->sign = RLC_POS;
+		a->sign = BN_POS;
 	}
 }
 
@@ -98,9 +105,15 @@ void bn_clean(bn_t a) {
 		a->alloc = 0;
 	}
 #endif
+#if ALLOC == STATIC
+	if (a != NULL && a->dp != NULL) {
+		pool_put(a->dp);
+		a->dp = NULL;
+	}
+#endif
 	if (a != NULL) {
 		a->used = 0;
-		a->sign = RLC_POS;
+		a->sign = BN_POS;
 	}
 }
 
@@ -109,19 +122,19 @@ void bn_grow(bn_t a, int digits) {
 	dig_t *t;
 
 	if (a->alloc < digits) {
-		/* At least add RLC_BN_SIZE more digits. */
-		digits += (RLC_BN_SIZE * 2) - (digits % RLC_BN_SIZE);
-		t = (dig_t *)realloc(a->dp, (RLC_DIG / 8) * digits);
+		/* At least add BN_SIZE more digits. */
+		digits += (BN_SIZE * 2) - (digits % BN_SIZE);
+		t = (dig_t *)realloc(a->dp, (BN_DIGIT / 8) * digits);
 		if (t == NULL) {
-			RLC_THROW(ERR_NO_MEMORY);
+			THROW(ERR_NO_MEMORY);
 		}
 		a->dp = t;
 		/* Set the newly allocated digits to zero. */
 		a->alloc = digits;
 	}
-#else /* ALLOC == AUTO || ALLOC == STACK */
-	if (digits > RLC_BN_SIZE) {
-		RLC_THROW(ERR_NO_PRECI)
+#else /* ALLOC == STATIC || ALLOC == STACK */
+	if (digits > BN_SIZE) {
+		THROW(ERR_NO_PRECI)
 	}
 	(void)a;
 #endif
@@ -135,6 +148,6 @@ void bn_trim(bn_t a) {
 	if (a->used <= 0) {
 		a->used = 1;
 		a->dp[0] = 0;
-		a->sign = RLC_POS;
+		a->sign = BN_POS;
 	}
 }

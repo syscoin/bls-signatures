@@ -127,7 +127,7 @@ int makeKey2(keyInstance * key, BYTE direction, int keyLen, char *keyMaterial) {
 	}
 
 	if (keyMaterial != NULL) {
-		memcpy(key->keyMaterial, keyMaterial, keyLen / 8);
+		strncpy(key->keyMaterial, keyMaterial, keyLen / 4);
 	}
 
 	/* initialize key schedule: */

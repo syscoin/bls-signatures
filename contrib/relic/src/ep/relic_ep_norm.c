@@ -1,90 +1,80 @@
 /*
  * RELIC is an Efficient LIbrary for Cryptography
- * Copyright (C) 2007-2020 RELIC Authors
+ * Copyright (C) 2007-2017 RELIC Authors
  *
  * This file is part of RELIC. RELIC is legal property of its developers,
  * whose names are not listed here. Please refer to the COPYRIGHT file
  * for contact information.
  *
- * RELIC is free software; you can redistribute it and/or modify it under the
- * terms of the version 2.1 (or later) of the GNU Lesser General Public License
- * as published by the Free Software Foundation; or version 2.0 of the Apache
- * License as published by the Apache Software Foundation. See the LICENSE files
- * for more details.
+ * RELIC is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * RELIC is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the LICENSE files for more details.
+ * RELIC is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public or the
- * Apache License along with RELIC. If not, see <https://www.gnu.org/licenses/>
- * or <https://www.apache.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with RELIC. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
  * @file
  *
- * Implementation of point normalization on prime elliptic curves.
+ * Implementation of the point normalization on prime elliptic curves.
  *
  * @ingroup ep
  */
 
-#include "relic_core.h"
+#include <relic_core.h>
 
 /*============================================================================*/
 /* Private definitions                                                        */
 /*============================================================================*/
 
-#if EP_ADD == PROJC || EP_ADD == JACOB || !defined(STRIP)
+#if EP_ADD == PROJC || !defined(STRIP)
 
 /**
  * Normalizes a point represented in projective coordinates.
  *
  * @param r			- the result.
  * @param p			- the point to normalize.
- * @param inv		- the flag to indicate if z is already inverted.
  */
-static void ep_norm_imp(ep_t r, const ep_t p, int inv) {
-	if (p->coord != BASIC) {
-		fp_t t;
+static void ep_norm_imp(ep_t r, const ep_t p, int inverted) {
+	if (!p->norm) {
+		fp_t t0, t1;
 
-		fp_null(t);
+		fp_null(t0);
+		fp_null(t1);
 
-		RLC_TRY {
-			fp_new(t);
+		TRY {
 
-			if (inv) {
-				fp_copy(r->z, p->z);
+			fp_new(t0);
+			fp_new(t1);
+
+			if (inverted) {
+				fp_copy(t1, p->z);
 			} else {
-				fp_inv(r->z, p->z);
+				fp_inv(t1, p->z);
 			}
-
-			switch (p->coord) {
-				case PROJC:
-					fp_mul(r->x, p->x, r->z);
-					fp_mul(r->y, p->y, r->z);
-					break;
-				case JACOB:
-					fp_sqr(t, r->z);
-					fp_mul(r->x, p->x, t);
-					fp_mul(t, t, r->z);
-					fp_mul(r->y, p->y, t);
-					break;
-				default:
-					ep_copy(r, p);
-					break;
-			}
+			fp_sqr(t0, t1);
+			fp_mul(r->x, p->x, t0);
+			fp_mul(t0, t0, t1);
+			fp_mul(r->y, p->y, t0);
 			fp_set_dig(r->z, 1);
 		}
-		RLC_CATCH_ANY {
-			RLC_THROW(ERR_CAUGHT);
+		CATCH_ANY {
+			THROW(ERR_CAUGHT);
 		}
-		RLC_FINALLY {
-			fp_free(t);
+		FINALLY {
+			fp_free(t0);
+			fp_free(t1);
 		}
 	}
 
-	r->coord = BASIC;
+	r->norm = 1;
 }
 
 #endif /* EP_ADD == PROJC */
@@ -99,26 +89,26 @@ void ep_norm(ep_t r, const ep_t p) {
 		return;
 	}
 
-	if (p->coord == BASIC) {
-		/* If the point is represented in affine coordinates, just copy it. */
+	if (p->norm) {
+		/* If the point is represented in affine coordinates, we just copy it. */
 		ep_copy(r, p);
 		return;
 	}
-#if EP_ADD == PROJC || EP_ADD == JACOB || !defined(STRIP)
+#if EP_ADD == PROJC || !defined(STRIP)
 	ep_norm_imp(r, p, 0);
 #endif /* EP_ADD == PROJC */
 }
 
 void ep_norm_sim(ep_t *r, const ep_t *t, int n) {
 	int i;
-	fp_t* a = RLC_ALLOCA(fp_t, n);
+	fp_t a[n];
 
-	RLC_TRY {
-		if (a == NULL) {
-			RLC_THROW(ERR_NO_MEMORY);
-		}
+	for (i = 0; i < n; i++) {
+		fp_null(a[i]);
+	}
+
+	TRY {
 		for (i = 0; i < n; i++) {
-			fp_null(a[i]);
 			fp_new(a[i]);
 			fp_copy(a[i], t[i]->z);
 		}
@@ -128,22 +118,19 @@ void ep_norm_sim(ep_t *r, const ep_t *t, int n) {
 		for (i = 0; i < n; i++) {
 			fp_copy(r[i]->x, t[i]->x);
 			fp_copy(r[i]->y, t[i]->y);
-			if (!ep_is_infty(t[i])) {
-				fp_copy(r[i]->z, a[i]);
-			}
+			fp_copy(r[i]->z, a[i]);
 		}
 
 		for (i = 0; i < n; i++) {
 			ep_norm_imp(r[i], r[i], 1);
 		}
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		for (i = 0; i < n; i++) {
 			fp_free(a[i]);
 		}
-		RLC_FREE(a);
 	}
 }

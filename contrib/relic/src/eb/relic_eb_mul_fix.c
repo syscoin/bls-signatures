@@ -1,24 +1,23 @@
 /*
  * RELIC is an Efficient LIbrary for Cryptography
- * Copyright (C) 2007-2020 RELIC Authors
+ * Copyright (C) 2007-2017 RELIC Authors
  *
  * This file is part of RELIC. RELIC is legal property of its developers,
  * whose names are not listed here. Please refer to the COPYRIGHT file
  * for contact information.
  *
- * RELIC is free software; you can redistribute it and/or modify it under the
- * terms of the version 2.1 (or later) of the GNU Lesser General Public License
- * as published by the Free Software Foundation; or version 2.0 of the Apache
- * License as published by the Apache Software Foundation. See the LICENSE files
- * for more details.
+ * RELIC is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * RELIC is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the LICENSE files for more details.
+ * RELIC is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public or the
- * Apache License along with RELIC. If not, see <https://www.gnu.org/licenses/>
- * or <https://www.apache.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with RELIC. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -29,7 +28,7 @@
  * @ingroup eb
  */
 
-#include "relic_core.h"
+#include <relic_core.h>
 
 /*============================================================================*/
 /* Private definitions                                                        */
@@ -50,7 +49,7 @@
  */
 static void eb_mul_fix_kbltz(eb_t r, const eb_t *t, const bn_t k) {
 	int i, l, n;
-	int8_t u, tnaf[RLC_FB_BITS + 8];
+	int8_t u, tnaf[FB_BITS + 8];
 
 	if (bn_is_zero(k)) {
 		eb_set_infty(r);
@@ -58,7 +57,7 @@ static void eb_mul_fix_kbltz(eb_t r, const eb_t *t, const bn_t k) {
 	}
 
 	/* Compute the w-TNAF representation of k. */
-	if (eb_curve_opt_a() == RLC_ZERO) {
+	if (eb_curve_opt_a() == OPT_ZERO) {
 		u = -1;
 	} else {
 		u = 1;
@@ -66,7 +65,7 @@ static void eb_mul_fix_kbltz(eb_t r, const eb_t *t, const bn_t k) {
 
 	/* Compute the w-TNAF representation of k. */
 	l = sizeof(tnaf);
-	bn_rec_tnaf(tnaf, &l, k, u, RLC_FB_BITS, EB_DEPTH);
+	bn_rec_tnaf(tnaf, &l, k, u, FB_BITS, EB_DEPTH);
 
 	n = tnaf[l - 1];
 	if (n > 0) {
@@ -88,7 +87,7 @@ static void eb_mul_fix_kbltz(eb_t r, const eb_t *t, const bn_t k) {
 	}
 	/* Convert r to affine coordinates. */
 	eb_norm(r, r);
-	if (bn_sign(k) == RLC_NEG) {
+	if (bn_sign(k) == BN_NEG) {
 		eb_neg(r, r);
 	}
 }
@@ -107,7 +106,7 @@ static void eb_mul_fix_kbltz(eb_t r, const eb_t *t, const bn_t k) {
  */
 static void eb_mul_fix_plain(eb_t r, const eb_t *t, const bn_t k) {
 	int l, i, n;
-	int8_t naf[RLC_FB_BITS + 1];
+	int8_t naf[FB_BITS + 1];
 
 	if (bn_is_zero(k)) {
 		eb_set_infty(r);
@@ -115,7 +114,7 @@ static void eb_mul_fix_plain(eb_t r, const eb_t *t, const bn_t k) {
 	}
 
 	/* Compute the w-TNAF representation of k. */
-	l = RLC_FB_BITS + 1;
+	l = FB_BITS + 1;
 	bn_rec_naf(naf, &l, k, EB_DEPTH);
 
 	n = naf[l - 1];
@@ -136,7 +135,7 @@ static void eb_mul_fix_plain(eb_t r, const eb_t *t, const bn_t k) {
 	}
 	/* Convert r to affine coordinates. */
 	eb_norm(r, r);
-	if (bn_sign(k) == RLC_NEG) {
+	if (bn_sign(k) == BN_NEG) {
 		eb_neg(r, r);
 	}
 }
@@ -156,7 +155,7 @@ void eb_mul_pre_basic(eb_t *t, const eb_t p) {
 
 	bn_null(n);
 
-	RLC_TRY {
+	TRY {
 		bn_new(n);
 
 		eb_curve_get_ord(n);
@@ -168,10 +167,10 @@ void eb_mul_pre_basic(eb_t *t, const eb_t p) {
 
 		eb_norm_sim(t + 1, (const eb_t *)t + 1, bn_bits(n) - 1);
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		bn_free(n);
 	}
 }
@@ -189,8 +188,180 @@ void eb_mul_fix_basic(eb_t r, const eb_t *t, const bn_t k) {
 		}
 	}
 	eb_norm(r, r);
-	if (bn_sign(k) == RLC_NEG) {
+	if (bn_sign(k) == BN_NEG) {
 		eb_neg(r, r);
+	}
+}
+
+#endif
+
+#if EB_FIX == YAOWI || !defined(STRIP)
+
+void eb_mul_pre_yaowi(eb_t *t, const eb_t p) {
+	int i, l;
+	bn_t n;
+
+	bn_null(n);
+
+	TRY {
+		bn_new(n);
+
+		eb_curve_get_ord(n);
+		l = CEIL(bn_bits(n), EB_DEPTH);
+
+		eb_copy(t[0], p);
+		for (i = 1; i < l; i++) {
+			eb_dbl(t[i], t[i - 1]);
+			for (int j = 1; j < EB_DEPTH; j++) {
+				eb_dbl(t[i], t[i]);
+			}
+		}
+
+		eb_norm_sim(t + 1, (const eb_t *)t + 1, l - 1);
+	} CATCH_ANY {
+		THROW(ERR_CAUGHT);
+	} FINALLY {
+		bn_free(n);
+	}
+}
+
+void eb_mul_fix_yaowi(eb_t r, const eb_t *t, const bn_t k) {
+	int i, j, l;
+	eb_t a;
+	uint8_t win[CEIL(FB_BITS, EB_DEPTH)];
+
+	if (bn_is_zero(k)) {
+		eb_set_infty(r);
+		return;
+	}
+
+	eb_null(a);
+
+	TRY {
+		eb_new(a);
+
+		eb_set_infty(r);
+		eb_set_infty(a);
+
+		l = CEIL(FB_BITS, EB_DEPTH);
+		bn_rec_win(win, &l, k, EB_DEPTH);
+
+		for (j = (1 << EB_DEPTH) - 1; j >= 1; j--) {
+			for (i = 0; i < l; i++) {
+				if (win[i] == j) {
+					eb_add(a, a, t[i]);
+				}
+			}
+			eb_add(r, r, a);
+		}
+		eb_norm(r, r);
+		if (bn_sign(k) == BN_NEG) {
+			eb_neg(r, r);
+		}
+	}
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
+	}
+	FINALLY {
+		eb_free(a);
+	}
+}
+
+#endif
+
+#if EB_FIX == NAFWI || !defined(STRIP)
+
+void eb_mul_pre_nafwi(eb_t *t, const eb_t p) {
+	bn_t n;
+
+	bn_null(n);
+
+	TRY {
+		int l;
+		bn_new(n);
+
+		eb_curve_get_ord(n);
+		l = CEIL(bn_bits(n) + 1, EB_DEPTH);
+
+		eb_copy(t[0], p);
+		for (int i = 1; i < l; i++) {
+			eb_dbl(t[i], t[i - 1]);
+			for (int j = 1; j < EB_DEPTH; j++) {
+				eb_dbl(t[i], t[i]);
+			}
+		}
+
+		eb_norm_sim(t + 1, (const eb_t *)t + 1, l - 1);
+	}
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
+	}
+	FINALLY {
+		bn_free(n);
+	}
+}
+
+void eb_mul_fix_nafwi(eb_t r, const eb_t *t, const bn_t k) {
+	int i, j, l, d, m;
+	eb_t a;
+	int8_t naf[FB_BITS + 1];
+	char w;
+
+	if (bn_is_zero(k)) {
+		eb_set_infty(r);
+		return;
+	}
+
+	eb_null(a);
+
+	TRY {
+		eb_new(a);
+
+		eb_set_infty(r);
+		eb_set_infty(a);
+
+		l = sizeof(naf);
+		bn_rec_naf(naf, &l, k, 2);
+		d = CEIL(l, EB_DEPTH);
+
+		for (i = 0; i < d; i++) {
+			w = 0;
+			for (j = EB_DEPTH - 1; j >= 0; j--) {
+				if (i * EB_DEPTH + j < l) {
+					w = (char)(w << 1);
+					w = (char)(w + naf[i * EB_DEPTH + j]);
+				}
+			}
+			naf[i] = w;
+		}
+
+		if (EB_DEPTH % 2 == 0) {
+			m = ((1 << (EB_DEPTH + 1)) - 2) / 3;
+		} else {
+			m = ((1 << (EB_DEPTH + 1)) - 1) / 3;
+		}
+
+		for (j = m; j >= 1; j--) {
+			for (i = 0; i < d; i++) {
+				if (naf[i] == j) {
+					eb_add(a, a, t[i]);
+				}
+				if (naf[i] == -j) {
+					eb_sub(a, a, t[i]);
+				}
+			}
+			eb_add(r, r, a);
+		}
+		eb_norm(r, r);
+		if (bn_sign(k) == BN_NEG) {
+			eb_neg(r, r);
+		}
+	}
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
+	}
+	FINALLY {
+		eb_free(a);
 	}
 }
 
@@ -204,11 +375,11 @@ void eb_mul_pre_combs(eb_t *t, const eb_t p) {
 
 	bn_null(ord);
 
-	RLC_TRY {
+	TRY {
 		bn_new(ord);
 
 		eb_curve_get_ord(ord);
-		l = RLC_CEIL(bn_bits(ord), EB_DEPTH);
+		l = CEIL(bn_bits(ord), EB_DEPTH);
 
 		eb_set_infty(t[0]);
 
@@ -226,12 +397,12 @@ void eb_mul_pre_combs(eb_t *t, const eb_t p) {
 			}
 		}
 
-		eb_norm_sim(t + 2, (const eb_t *)t + 2, RLC_EB_TABLE_COMBS - 2);
+		eb_norm_sim(t + 2, (const eb_t *)t + 2, RELIC_EB_TABLE_COMBS - 2);
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		bn_free(ord);
 	}
 }
@@ -247,11 +418,11 @@ void eb_mul_fix_combs(eb_t r, const eb_t *t, const bn_t k) {
 
 	bn_null(ord);
 
-	RLC_TRY {
+	TRY {
 		bn_new(ord);
 
 		eb_curve_get_ord(ord);
-		l = RLC_CEIL(bn_bits(ord), EB_DEPTH);
+		l = CEIL(bn_bits(ord), EB_DEPTH);
 
 		n = bn_bits(k);
 		p0 = (EB_DEPTH) * l - 1;
@@ -282,14 +453,14 @@ void eb_mul_fix_combs(eb_t r, const eb_t *t, const bn_t k) {
 			}
 		}
 		eb_norm(r, r);
-		if (bn_sign(k) == RLC_NEG) {
+		if (bn_sign(k) == BN_NEG) {
 			eb_neg(r, r);
 		}
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		bn_free(ord);
 	}
 }
@@ -304,11 +475,11 @@ void eb_mul_pre_combd(eb_t *t, const eb_t p) {
 
 	bn_null(n);
 
-	RLC_TRY {
+	TRY {
 		bn_new(n);
 
 		eb_curve_get_ord(n);
-		d = RLC_CEIL(bn_bits(n), EB_DEPTH);
+		d = CEIL(bn_bits(n), EB_DEPTH);
 		e = (d % 2 == 0 ? (d / 2) : (d / 2) + 1);
 
 		eb_set_infty(t[0]);
@@ -334,10 +505,10 @@ void eb_mul_pre_combd(eb_t *t, const eb_t p) {
 		eb_norm_sim(t + (1 << EB_DEPTH) + 1,
 				(const eb_t *)t + (1 << EB_DEPTH) + 1, (1 << EB_DEPTH) - 1);
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		bn_free(n);
 	}
 }
@@ -353,12 +524,12 @@ void eb_mul_fix_combd(eb_t r, const eb_t *t, const bn_t k) {
 
 	bn_null(n);
 
-	RLC_TRY {
+	TRY {
 		bn_new(n);
 
 		eb_curve_get_ord(n);
 
-		d = RLC_CEIL(bn_bits(n), EB_DEPTH);
+		d = CEIL(bn_bits(n), EB_DEPTH);
 		e = (d % 2 == 0 ? (d / 2) : (d / 2) + 1);
 
 		eb_set_infty(r);
@@ -390,14 +561,14 @@ void eb_mul_fix_combd(eb_t r, const eb_t *t, const bn_t k) {
 			eb_add(r, r, t[(1 << EB_DEPTH) + w1]);
 		}
 		eb_norm(r, r);
-		if (bn_sign(k) == RLC_NEG) {
+		if (bn_sign(k) == BN_NEG) {
 			eb_neg(r, r);
 		}
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		bn_free(n);
 	}
 }

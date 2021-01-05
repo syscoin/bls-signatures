@@ -1,24 +1,23 @@
 /*
  * RELIC is an Efficient LIbrary for Cryptography
- * Copyright (C) 2007-2020 RELIC Authors
+ * Copyright (C) 2007-2017 RELIC Authors
  *
  * This file is part of RELIC. RELIC is legal property of its developers,
  * whose names are not listed here. Please refer to the COPYRIGHT file
  * for contact information.
  *
- * RELIC is free software; you can redistribute it and/or modify it under the
- * terms of the version 2.1 (or later) of the GNU Lesser General Public License
- * as published by the Free Software Foundation; or version 2.0 of the Apache
- * License as published by the Apache Software Foundation. See the LICENSE files
- * for more details.
+ * RELIC is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * RELIC is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the LICENSE files for more details.
+ * RELIC is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public or the
- * Apache License along with RELIC. If not, see <https://www.gnu.org/licenses/>
- * or <https://www.apache.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with RELIC. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -29,8 +28,8 @@
  * @ingroup bn
  */
 
-#include "relic_core.h"
-#include "relic_bn_low.h"
+#include <relic_core.h>
+#include <relic_bn_low.h>
 
 /*============================================================================*/
 /* Private definitions                                                        */
@@ -55,7 +54,7 @@ static void bn_div_imp(bn_t c, bn_t d, const bn_t a, const bn_t b) {
 	bn_null(r);
 
 	/* If |a| < |b|, we're done. */
-	if (bn_cmp_abs(a, b) == RLC_LT) {
+	if (bn_cmp_abs(a, b) == CMP_LT) {
 		if (bn_sign(a) == bn_sign(b)) {
 			if (c != NULL) {
 				bn_zero(c);
@@ -75,32 +74,27 @@ static void bn_div_imp(bn_t c, bn_t d, const bn_t a, const bn_t b) {
 		return;
 	}
 
-	RLC_TRY {
+	TRY {
 		bn_new(x);
-		bn_new_size(y, a->used);
+		bn_new(y);
 		bn_new_size(q, a->used + 1);
-		bn_new_size(r, b->used);
+		bn_new(r);
 		bn_zero(q);
 		bn_zero(r);
 		bn_abs(x, a);
 		bn_abs(y, b);
 
 		/* Find the sign. */
-		sign = (a->sign == b->sign ? RLC_POS : RLC_NEG);
+		sign = (a->sign == b->sign ? BN_POS : BN_NEG);
 
 		bn_divn_low(q->dp, r->dp, x->dp, a->used, y->dp, b->used);
 
-		q->used = a->used - b->used + 1;
-		q->sign = sign;
-		bn_trim(q);
-
-		r->used = b->used;
-		r->sign = b->sign;
-		bn_trim(r);
-
 		/* We have the quotient in q and the remainder in r. */
 		if (c != NULL) {
-			if ((bn_is_zero(r)) || (bn_sign(a) == bn_sign(b))) {
+			q->used = a->used - b->used + 1;
+			q->sign = sign;
+			bn_trim(q);
+			if (bn_sign(a) == bn_sign(b)) {
 				bn_copy(c, q);
 			} else {
 				bn_sub_dig(c, q, 1);
@@ -108,17 +102,20 @@ static void bn_div_imp(bn_t c, bn_t d, const bn_t a, const bn_t b) {
 		}
 
 		if (d != NULL) {
-			if ((bn_is_zero(r)) || (bn_sign(a) == bn_sign(b))) {
+			r->used = b->used;
+			r->sign = b->sign;
+			bn_trim(r);
+			if (bn_sign(a) == bn_sign(b)) {
 				bn_copy(d, r);
 			} else {
 				bn_sub(d, b, r);
 			}
 		}
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		bn_free(r);
 		bn_free(q);
 		bn_free(x);
@@ -132,14 +129,14 @@ static void bn_div_imp(bn_t c, bn_t d, const bn_t a, const bn_t b) {
 
 void bn_div(bn_t c, const bn_t a, const bn_t b) {
 	if (bn_is_zero(b)) {
-		RLC_THROW(ERR_NO_VALID);
+		THROW(ERR_NO_VALID);
 	}
 	bn_div_imp(c, NULL, a, b);
 }
 
 void bn_div_rem(bn_t c, bn_t d, const bn_t a, const bn_t b) {
 	if (bn_is_zero(b)) {
-		RLC_THROW(ERR_NO_VALID);
+		THROW(ERR_NO_VALID);
 	}
 	bn_div_imp(c, d, a, b);
 }
@@ -151,7 +148,7 @@ void bn_div_dig(bn_t c, const bn_t a, dig_t b) {
 	bn_null(q);
 
 	if (b == 0) {
-		RLC_THROW(ERR_NO_VALID);
+		THROW(ERR_NO_VALID);
 	}
 
 	if (b == 1 || bn_is_zero(a) == 1) {
@@ -161,8 +158,8 @@ void bn_div_dig(bn_t c, const bn_t a, dig_t b) {
 		return;
 	}
 
-	RLC_TRY {
-		bn_new_size(q, a->used);
+	TRY {
+		bn_new(q);
 		int size = a->used;
 		const dig_t *ap = a->dp;
 
@@ -175,10 +172,10 @@ void bn_div_dig(bn_t c, const bn_t a, dig_t b) {
 			bn_copy(c, q);
 		}
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		bn_free(q);
 	}
 }
@@ -190,7 +187,7 @@ void bn_div_rem_dig(bn_t c, dig_t *d, const bn_t a, dig_t b) {
 	bn_null(q);
 
 	if (b == 0) {
-		RLC_THROW(ERR_NO_VALID);
+		THROW(ERR_NO_VALID);
 	}
 
 	if (b == 1 || bn_is_zero(a) == 1) {
@@ -203,7 +200,7 @@ void bn_div_rem_dig(bn_t c, dig_t *d, const bn_t a, dig_t b) {
 		return;
 	}
 
-	RLC_TRY {
+	TRY {
 		bn_new(q);
 		int size = a->used;
 		const dig_t *ap = a->dp;
@@ -221,10 +218,11 @@ void bn_div_rem_dig(bn_t c, dig_t *d, const bn_t a, dig_t b) {
 			*d = r;
 		}
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		bn_free(q);
 	}
 }
+

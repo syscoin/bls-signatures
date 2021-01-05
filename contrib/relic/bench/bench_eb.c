@@ -1,24 +1,23 @@
 /*
  * RELIC is an Efficient LIbrary for Cryptography
- * Copyright (C) 2007-2020 RELIC Authors
+ * Copyright (C) 2007-2017 RELIC Authors
  *
  * This file is part of RELIC. RELIC is legal property of its developers,
  * whose names are not listed here. Please refer to the COPYRIGHT file
  * for contact information.
  *
- * RELIC is free software; you can redistribute it and/or modify it under the
- * terms of the version 2.1 (or later) of the GNU Lesser General Public License
- * as published by the Free Software Foundation; or version 2.0 of the Apache
- * License as published by the Apache Software Foundation. See the LICENSE files
- * for more details.
+ * RELIC is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * RELIC is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the LICENSE files for more details.
+ * RELIC is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public or the
- * Apache License along with RELIC. If not, see <https://www.gnu.org/licenses/>
- * or <https://www.apache.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with RELIC. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -31,8 +30,8 @@
 
 #include <stdio.h>
 
-#include "relic.h"
-#include "relic_bench.h"
+#include <relic.h>
+#include <relic_bench.h>
 
 static void memory(void) {
 	eb_t a[BENCH];
@@ -54,7 +53,7 @@ static void memory(void) {
 
 static void util(void) {
 	eb_t p, q, t[4];
-	uint8_t bin[2 * RLC_FB_BYTES + 1];
+	uint8_t bin[2 * FB_BYTES + 1];
 	int l;
 
 	eb_null(p);
@@ -110,10 +109,6 @@ static void util(void) {
 		BENCH_ADD(eb_rand(p));
 	} BENCH_END;
 
-	BENCH_BEGIN("eb_blind") {
-		BENCH_ADD(eb_blind(p, p));
-	} BENCH_END;
-
 	BENCH_BEGIN("eb_rhs") {
 		eb_rand(p);
 		BENCH_ADD(eb_rhs(q->x, p));
@@ -124,9 +119,9 @@ static void util(void) {
 		BENCH_ADD(eb_tab(t, p, 4));
 	} BENCH_END;
 
-	BENCH_BEGIN("eb_on_curve") {
+	BENCH_BEGIN("eb_is_valid") {
 		eb_rand(p);
-		BENCH_ADD(eb_on_curve(p));
+		BENCH_ADD(eb_is_valid(p));
 	} BENCH_END;
 
 	BENCH_BEGIN("eb_size_bin (0)") {
@@ -173,13 +168,13 @@ static void util(void) {
 }
 
 static void arith(void) {
-	eb_t p, q, r, t[RLC_EB_TABLE_MAX];
+	eb_t p, q, r, t[RELIC_EB_TABLE_MAX];
 	bn_t k, l, n;
 
 	eb_null(p);
 	eb_null(q);
 	eb_null(r);
-	for (int i = 0; i < RLC_EB_TABLE_MAX; i++) {
+	for (int i = 0; i < RELIC_EB_TABLE_MAX; i++) {
 		eb_null(t[i]);
 	} bn_null(k);
 	bn_null(l);
@@ -443,13 +438,13 @@ static void arith(void) {
 	BENCH_END;
 
 	BENCH_BEGIN("eb_mul_dig") {
-		bn_rand(k, RLC_POS, RLC_DIG);
+		bn_rand(k, BN_POS, BN_DIGIT);
 		bn_rand_mod(k, n);
 		BENCH_ADD(eb_mul_dig(p, q, k->dp[0]));
 	}
 	BENCH_END;
 
-	for (int i = 0; i < RLC_EB_TABLE; i++) {
+	for (int i = 0; i < RELIC_EB_TABLE; i++) {
 		eb_new(t[i]);
 	}
 
@@ -465,12 +460,12 @@ static void arith(void) {
 		BENCH_ADD(eb_mul_fix(q, (const eb_t *)t, k));
 	} BENCH_END;
 
-	for (int i = 0; i < RLC_EB_TABLE; i++) {
+	for (int i = 0; i < RELIC_EB_TABLE; i++) {
 		eb_free(t[i]);
 	}
 
 #if EB_FIX == BASIC || !defined(STRIP)
-	for (int i = 0; i < RLC_EB_TABLE_BASIC; i++) {
+	for (int i = 0; i < RELIC_EB_TABLE_BASIC; i++) {
 		eb_new(t[i]);
 	}
 	BENCH_BEGIN("eb_mul_pre_basic") {
@@ -484,13 +479,53 @@ static void arith(void) {
 		eb_mul_pre_basic(t, p);
 		BENCH_ADD(eb_mul_fix_basic(q, (const eb_t *)t, k));
 	} BENCH_END;
-	for (int i = 0; i < RLC_EB_TABLE_BASIC; i++) {
+	for (int i = 0; i < RELIC_EB_TABLE_BASIC; i++) {
+		eb_free(t[i]);
+	}
+#endif
+
+#if EB_FIX == YAOWI || !defined(STRIP)
+	for (int i = 0; i < RELIC_EB_TABLE_YAOWI; i++) {
+		eb_new(t[i]);
+	}
+	BENCH_BEGIN("eb_mul_pre_yaowi") {
+		eb_rand(p);
+		BENCH_ADD(eb_mul_pre_yaowi(t, p));
+	} BENCH_END;
+
+	BENCH_BEGIN("eb_mul_fix_yaowi") {
+		bn_rand_mod(k, n);
+		eb_rand(p);
+		eb_mul_pre_yaowi(t, p);
+		BENCH_ADD(eb_mul_fix_yaowi(q, (const eb_t *)t, k));
+	} BENCH_END;
+	for (int i = 0; i < RELIC_EB_TABLE_YAOWI; i++) {
+		eb_free(t[i]);
+	}
+#endif
+
+#if EB_FIX == NAFWI || !defined(STRIP)
+	for (int i = 0; i < RELIC_EB_TABLE_NAFWI; i++) {
+		eb_new(t[i]);
+	}
+	BENCH_BEGIN("eb_mul_pre_nafwi") {
+		eb_rand(p);
+		BENCH_ADD(eb_mul_pre_nafwi(t, p));
+	} BENCH_END;
+
+	BENCH_BEGIN("eb_mul_fix_nafwi") {
+		bn_rand_mod(k, n);
+		eb_rand(p);
+		eb_mul_pre_nafwi(t, p);
+		BENCH_ADD(eb_mul_fix_nafwi(q, (const eb_t *)t, k));
+	} BENCH_END;
+	for (int i = 0; i < RELIC_EB_TABLE_NAFWI; i++) {
 		eb_free(t[i]);
 	}
 #endif
 
 #if EB_FIX == COMBS || !defined(STRIP)
-	for (int i = 0; i < RLC_EB_TABLE_COMBS; i++) {
+	for (int i = 0; i < RELIC_EB_TABLE_COMBS; i++) {
 		eb_new(t[i]);
 	}
 	BENCH_BEGIN("eb_mul_pre_combs") {
@@ -504,13 +539,13 @@ static void arith(void) {
 		eb_mul_pre_combs(t, p);
 		BENCH_ADD(eb_mul_fix_combs(q, (const eb_t *)t, k));
 	} BENCH_END;
-	for (int i = 0; i < RLC_EB_TABLE_COMBS; i++) {
+	for (int i = 0; i < RELIC_EB_TABLE_COMBS; i++) {
 		eb_free(t[i]);
 	}
 #endif
 
 #if EB_FIX == COMBD || !defined(STRIP)
-	for (int i = 0; i < RLC_EB_TABLE_COMBD; i++) {
+	for (int i = 0; i < RELIC_EB_TABLE_COMBD; i++) {
 		eb_new(t[i]);
 	}
 	BENCH_BEGIN("eb_mul_pre_combd") {
@@ -524,13 +559,13 @@ static void arith(void) {
 		eb_mul_pre_combd(t, p);
 		BENCH_ADD(eb_mul_fix_combd(q, (const eb_t *)t, k));
 	} BENCH_END;
-	for (int i = 0; i < RLC_EB_TABLE_COMBD; i++) {
+	for (int i = 0; i < RELIC_EB_TABLE_COMBD; i++) {
 		eb_free(t[i]);
 	}
 #endif
 
 #if EB_FIX == LWNAF || !defined(STRIP)
-	for (int i = 0; i < RLC_EB_TABLE_LWNAF; i++) {
+	for (int i = 0; i < RELIC_EB_TABLE_LWNAF; i++) {
 		eb_new(t[i]);
 	}
 	BENCH_BEGIN("eb_mul_pre_lwnaf") {
@@ -544,7 +579,7 @@ static void arith(void) {
 		eb_mul_pre_lwnaf(t, p);
 		BENCH_ADD(eb_mul_fix_lwnaf(q, (const eb_t *)t, k));
 	} BENCH_END;
-	for (int i = 0; i < RLC_EB_TABLE_LWNAF; i++) {
+	for (int i = 0; i < RELIC_EB_TABLE_LWNAF; i++) {
 		eb_free(t[i]);
 	}
 #endif
@@ -637,9 +672,9 @@ static void bench(void) {
 }
 
 int main(void) {
-	int r0 = RLC_ERR, r1 = RLC_ERR;
+	int r0 = STS_ERR, r1 = STS_ERR;
 
-	if (core_init() != RLC_OK) {
+	if (core_init() != STS_OK) {
 		core_clean();
 		return 1;
 	}
@@ -649,21 +684,21 @@ int main(void) {
 
 #if defined(EB_PLAIN)
 	r0 = eb_param_set_any_plain();
-	if (r0 == RLC_OK) {
+	if (r0 == STS_OK) {
 		bench();
 	}
 #endif
 
 #if defined(EB_KBLTZ)
 	r1 = eb_param_set_any_kbltz();
-	if (r1 == RLC_OK) {
+	if (r1 == STS_OK) {
 		bench();
 	}
 #endif
 
-	if (r0 == RLC_ERR && r1 == RLC_ERR) {
-		if (eb_param_set_any() == RLC_ERR) {
-			RLC_THROW(ERR_NO_CURVE);
+	if (r0 == STS_ERR && r1 == STS_ERR) {
+		if (eb_param_set_any() == STS_ERR) {
+			THROW(ERR_NO_CURVE);
 		}
 	}
 

@@ -1,24 +1,23 @@
 /*
  * RELIC is an Efficient LIbrary for Cryptography
- * Copyright (C) 2007-2020 RELIC Authors
+ * Copyright (C) 2007-2017 RELIC Authors
  *
  * This file is part of RELIC. RELIC is legal property of its developers,
  * whose names are not listed here. Please refer to the COPYRIGHT file
  * for contact information.
  *
- * RELIC is free software; you can redistribute it and/or modify it under the
- * terms of the version 2.1 (or later) of the GNU Lesser General Public License
- * as published by the Free Software Foundation; or version 2.0 of the Apache
- * License as published by the Apache Software Foundation. See the LICENSE files
- * for more details.
+ * RELIC is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * RELIC is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the LICENSE files for more details.
+ * RELIC is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public or the
- * Apache License along with RELIC. If not, see <https://www.gnu.org/licenses/>
- * or <https://www.apache.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with RELIC. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -29,12 +28,12 @@
  * @ingroup fb
  */
 
-#include "relic_core.h"
-#include "relic_fb.h"
-#include "relic_fb_low.h"
-#include "relic_bn_low.h"
-#include "relic_util.h"
-#include "relic_rand.h"
+#include <relic_core.h>
+#include <relic_fb.h>
+#include <relic_fb_low.h>
+#include <relic_bn_low.h>
+#include <relic_util.h>
+#include <relic_rand.h>
 
 /*============================================================================*/
 /* Public definitions                                                         */
@@ -50,18 +49,14 @@ void fb_inv_basic(fb_t c, const fb_t a) {
 	fb_null(u);
 	fb_null(v);
 
-	if (fb_is_zero(a)) {
-		RLC_THROW(ERR_NO_VALID);
-	}
-
-	RLC_TRY {
+	TRY {
 		fb_new(t);
 		fb_new(u);
 		fb_new(v);
 
 #if (FB_POLYN % 2) == 0
 		fb_sqr(v, a);
-		for (i = 2; i < RLC_FB_BITS; i++) {
+		for (i = 2; i < FB_BITS; i++) {
 			fb_sqr(u, a);
 			for (int j = 1; j < i; j++) {
 				fb_sqr(u, u);
@@ -73,7 +68,7 @@ void fb_inv_basic(fb_t c, const fb_t a) {
 		/* u = a^2, v = 1, x = (m - 1)/2. */
 		fb_sqr(u, a);
 		fb_set_dig(v, 1);
-		x = (RLC_FB_BITS - 1) >> 1;
+		x = (FB_BITS - 1) >> 1;
 
 		while (x != 0) {
 			/* u = u * a^{2x}. */
@@ -94,10 +89,10 @@ void fb_inv_basic(fb_t c, const fb_t a) {
 #endif
 		fb_copy(c, v);
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		fb_free(t);
 		fb_free(u);
 		fb_free(v);
@@ -117,11 +112,7 @@ void fb_inv_binar(fb_t c, const fb_t a) {
 	dv_null(g1);
 	dv_null(g2);
 
-	if (fb_is_zero(a)) {
-		RLC_THROW(ERR_NO_VALID);
-	}
-
-	RLC_TRY {
+	TRY {
 		dv_new(u);
 		dv_new(v);
 		dv_new(g1);
@@ -130,15 +121,15 @@ void fb_inv_binar(fb_t c, const fb_t a) {
 		/* u = a, v = f, g1 = 1, g2 = 0. */
 		fb_copy(u, a);
 		fb_copy(v, fb_poly_get());
-		if (RLC_FB_BITS % RLC_DIG == 0) {
-			v[RLC_FB_DIGS] = 1;
+		if (FB_BITS % FB_DIGIT == 0) {
+			v[FB_DIGS] = 1;
 		}
-		dv_zero(g1, 2 * RLC_FB_DIGS);
+		dv_zero(g1, 2 * FB_DIGS);
 		g1[0] = 1;
-		dv_zero(g2, 2 * RLC_FB_DIGS);
+		dv_zero(g2, 2 * FB_DIGS);
 
-		lu = RLC_FB_DIGS;
-		lv = RLC_FB_DIGS + (RLC_FB_BITS % RLC_DIG == 0);
+		lu = FB_DIGS;
+		lv = FB_DIGS + (FB_BITS % FB_DIGIT == 0);
 
 		/* While (u != 1 && v != 1. */
 		while (1) {
@@ -149,11 +140,11 @@ void fb_inv_binar(fb_t c, const fb_t a) {
 				/* If z divides g1 then g1 = g1/z; else g1 = (g1 + f)/z. */
 				if ((g1[0] & 0x01) == 1) {
 					fb_poly_add(g1, g1);
-					if (RLC_FB_BITS % RLC_DIG == 0) {
-						g1[RLC_FB_DIGS] ^= 1;
+					if (FB_BITS % FB_DIGIT == 0) {
+						g1[FB_DIGS] ^= 1;
 					}
 				}
-				bn_rsh1_low(g1, g1, RLC_FB_DIGS + 1);
+				bn_rsh1_low(g1, g1, FB_DIGS + 1);
 			}
 
 			while (u[lu - 1] == 0)
@@ -168,11 +159,11 @@ void fb_inv_binar(fb_t c, const fb_t a) {
 				/* If z divides g2 then g2 = g2/z; else (g2 = g2 + f)/z. */
 				if ((g2[0] & 0x01) == 1) {
 					fb_poly_add(g2, g2);
-					if (RLC_FB_BITS % RLC_DIG == 0) {
-						g2[RLC_FB_DIGS] ^= 1;
+					if (FB_BITS % FB_DIGIT == 0) {
+						g2[FB_DIGS] ^= 1;
 					}
 				}
-				bn_rsh1_low(g2, g2, RLC_FB_DIGS + 1);
+				bn_rsh1_low(g2, g2, FB_DIGS + 1);
 			}
 
 			while (v[lv - 1] == 0)
@@ -198,10 +189,10 @@ void fb_inv_binar(fb_t c, const fb_t a) {
 			fb_copy(c, g2);
 		}
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		dv_free(u);
 		dv_free(v);
 		dv_free(g1);
@@ -223,18 +214,14 @@ void fb_inv_exgcd(fb_t c, const fb_t a) {
 	fb_null(_g1);
 	fb_null(_g2);
 
-	if (fb_is_zero(a)) {
-		RLC_THROW(ERR_NO_VALID);
-	}
-
-	RLC_TRY {
+	TRY {
 		dv_new(_u);
 		dv_new(_v);
 		dv_new(_g1);
 		dv_new(_g2);
 
-		dv_zero(_g1, RLC_FB_DIGS + 1);
-		dv_zero(_g2, RLC_FB_DIGS + 1);
+		dv_zero(_g1, FB_DIGS + 1);
+		dv_zero(_g2, FB_DIGS + 1);
 
 		u = _u;
 		v = _v;
@@ -246,11 +233,11 @@ void fb_inv_exgcd(fb_t c, const fb_t a) {
 		fb_copy(v, fb_poly_get());
 		g1[0] = 1;
 
-		lu = lv = RLC_FB_DIGS;
+		lu = lv = FB_DIGS;
 		l1 = l2 = 1;
 
 		bu = fb_bits(u);
-		bv = RLC_FB_BITS + 1;
+		bv = FB_BITS + 1;
 		j = bu - bv;
 
 		/* While (u != 1). */
@@ -276,7 +263,7 @@ void fb_inv_exgcd(fb_t c, const fb_t a) {
 				j = -j;
 			}
 
-			RLC_RIP(j, d, j);
+			SPLIT(j, d, j, FB_DIG_LOG);
 
 			/* u = u + v * z^j. */
 			if (j > 0) {
@@ -309,19 +296,15 @@ void fb_inv_exgcd(fb_t c, const fb_t a) {
 
 			/* j = deg(u) - deg(v). */
 			lt = util_bits_dig(u[lu - 1]) - util_bits_dig(v[lv - 1]);
-			if (lv > lu) {
-				j = -((lv - lu) << RLC_DIG_LOG) + lt;
-			} else {
-				j = ((lu - lv) << RLC_DIG_LOG) + lt;
-			}
+			j = ((lu - lv) << FB_DIG_LOG) + lt;
 		}
 		/* Return g1. */
 		fb_copy(c, g1);
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		dv_free(_u);
 		dv_free(_v);
 		dv_free(_g1);
@@ -343,14 +326,7 @@ void fb_inv_almos(fb_t c, const fb_t a) {
 	dv_null(_u);
 	dv_null(_v);
 
-	if (fb_is_zero(a)) {
-		RLC_THROW(ERR_NO_VALID);
-	}
-
-	/* This is actually the binary version of the Extended Euclidean algorithm
- 	 * discussed in the Almost Inverse paper, so a rename is needed. */
-
-	RLC_TRY {
+	TRY {
 		dv_new(_b);
 		dv_new(_d);
 		dv_new(_u);
@@ -362,18 +338,18 @@ void fb_inv_almos(fb_t c, const fb_t a) {
 		v = _v;
 
 		/* b = 1, d = 0, u = a, v = f. */
-		dv_zero(b, 2 * RLC_FB_DIGS);
+		dv_zero(b, 2 * FB_DIGS);
 		fb_set_dig(b, 1);
-		dv_zero(d, 2 * RLC_FB_DIGS);
+		dv_zero(d, 2 * FB_DIGS);
 		fb_copy(u, a);
 		fb_copy(v, fb_poly_get());
 
-		if (RLC_FB_BITS % RLC_DIG == 0) {
-			v[RLC_FB_DIGS] = 1;
+		if (FB_BITS % FB_DIGIT == 0) {
+			v[FB_DIGS] = 1;
 		}
 
-		lu = RLC_FB_DIGS;
-		lv = RLC_FB_DIGS + (RLC_FB_BITS % RLC_DIG == 0);
+		lu = FB_DIGS;
+		lv = FB_DIGS + (FB_BITS % FB_DIGIT == 0);
 
 		while (1) {
 			/* While z divides u do. */
@@ -383,12 +359,12 @@ void fb_inv_almos(fb_t c, const fb_t a) {
 				/* If z divide v then b = b/z; else b = (b + f)/z. */
 				if ((b[0] & 0x01) == 1) {
 					fb_poly_add(b, b);
-					if (RLC_FB_BITS % RLC_DIG == 0) {
-						b[RLC_FB_DIGS] ^= 1;
+					if (FB_BITS % FB_DIGIT == 0) {
+						b[FB_DIGS] ^= 1;
 					}
 				}
-				/* b often has RLC_FB_DIGS digits. */
-				bn_rsh1_low(b, b, RLC_FB_DIGS + 1);
+				/* b often has FB_DIGS digits. */
+				bn_rsh1_low(b, b, FB_DIGS + 1);
 			}
 			/* If u = 1, return b. */
 			while (u[lu - 1] == 0)
@@ -416,10 +392,10 @@ void fb_inv_almos(fb_t c, const fb_t a) {
 			fb_addn_low(b, b, d);
 		}
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		fb_copy(c, b);
 		dv_free(_b);
 		dv_free(_d);
@@ -435,28 +411,21 @@ void fb_inv_almos(fb_t c, const fb_t a) {
 void fb_inv_itoht(fb_t c, const fb_t a) {
 	int i, x, y, len;
 	const int *chain = fb_poly_get_chain(&len);
-	int *u = RLC_ALLOCA(int, len + 1);
-	fb_t *table = RLC_ALLOCA(fb_t, len + 1);
+	int u[len + 1];
+	fb_t table[len + 1];
 
 	for (i = 0; i <= len; i++) {
 		fb_null(table[i]);
 	}
 
-	if (fb_is_zero(a)) {
-		RLC_THROW(ERR_NO_VALID);
-	}
-
-	RLC_TRY {
-		if (u == NULL || table == NULL) {
-			RLC_THROW(ERR_NO_MEMORY);
-		}
+	TRY {
 		for (i = 0; i <= len; i++) {
 			fb_new(table[i]);
 		}
 
 #if (FB_POLYN % 2) == 0
 		fb_sqr(table[0], a);
-		for (i = 2; i < RLC_FB_BITS; i++) {
+		for (i = 2; i < FB_BITS; i++) {
 			fb_sqr(table[1], a);
 			for (int j = 1; j < i; j++) {
 				fb_sqr(table[1], table[1]);
@@ -484,15 +453,13 @@ void fb_inv_itoht(fb_t c, const fb_t a) {
 		fb_sqr(c, table[len]);
 #endif
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		for (i = 0; i <= len; i++) {
 			fb_free(table[i]);
 		}
-		RLC_FREE(u);
-		RLC_FREE(table);
 	}
 }
 
@@ -510,11 +477,7 @@ void fb_inv_bruch(fb_t c, const fb_t a) {
 	fb_null(_u);
 	fb_null(_v);
 
-	if (fb_is_zero(a)) {
-		RLC_THROW(ERR_NO_VALID);
-	}
-
-	RLC_TRY {
+	TRY {
 		fb_new(_r);
 		fb_new(_s);
 		fb_new(_u);
@@ -530,13 +493,13 @@ void fb_inv_bruch(fb_t c, const fb_t a) {
 		u = _u;
 		v = _v;
 
-		for (int i = 1; i <= 2 * RLC_FB_BITS; i++) {
-			if ((r[RLC_FB_DIGS - 1] & ((dig_t)1 << (RLC_FB_BITS % RLC_DIG))) == 0) {
+		for (int i = 1; i <= 2 * FB_BITS; i++) {
+			if ((r[FB_DIGS - 1] & ((dig_t)1 << (FB_BITS % FB_DIGIT))) == 0) {
 				fb_lsh(r, r, 1);
 				fb_lsh(u, u, 1);
 				delta++;
 			} else {
-				if ((s[RLC_FB_DIGS - 1] & ((dig_t)1 << (RLC_FB_BITS % RLC_DIG)))) {
+				if ((s[FB_DIGS - 1] & ((dig_t)1 << (FB_BITS % FB_DIGIT)))) {
 					fb_add(s, s, r);
 					fb_add(v, v, u);
 				}
@@ -557,9 +520,9 @@ void fb_inv_bruch(fb_t c, const fb_t a) {
 			}
 		}
 		fb_copy(c, u);
-	} RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
-	} RLC_FINALLY {
+	} CATCH_ANY {
+		THROW(ERR_CAUGHT);
+	} FINALLY {
 		fb_free(_r);
 		fb_free(_s);
 		fb_free(_u);
@@ -569,98 +532,24 @@ void fb_inv_bruch(fb_t c, const fb_t a) {
 
 #endif
 
-#if FB_INV == CTAIA || !defined(STRIP)
-
-void fb_inv_ctaia(fb_t c, const fb_t a) {
-	fb_t r, s, t, u, v;
-	int i, k, d, r0, d0;
-
-	fb_null(r);
-	fb_null(s);
-	fb_null(t);
-	fb_null(u);
-	fb_null(v);
-
-	if (fb_is_zero(a)) {
-		RLC_THROW(ERR_NO_VALID);
-	}
-
-	RLC_TRY {
-		fb_new(r);
-		fb_new(s);
-		fb_new(t);
-		fb_new(u);
-		fb_new(v);
-
-		fb_copy(r, a);
-		fb_copy(t, fb_poly_get());
-		fb_copy(s, t);
-		fb_set_dig(u, 1);
-		fb_zero(v);
-		d = -1;
-
-		for (k = 1; k < 2 * RLC_FB_BITS; k++) {
-			r0 = r[0] & 1;
-			d0 = d >> (8 * sizeof(int) - 1);
-
-			for (i = 0; i < RLC_FB_DIGS; i++) {
-				r[i] ^= (s[i] & -r0);
-				u[i] ^= (v[i] & -r0);
-				s[i] ^= (r[i] & d0);
-				v[i] ^= (u[i] & d0);
-			}
-
-			d = RLC_SEL(d, -d, r0 & -d0);
-
-			fb_rsh(r, r, 1);
-
-			r0 = u[0] & 1;
-			fb_poly_add(t, u);
-			for (i = 0; i < RLC_FB_DIGS; i++) {
-				u[i] = RLC_SEL(u[i], t[i], r0);
-			}
-			fb_rsh(u, u, 1);
-			d--;
-		}
-
-		fb_copy(c, v);
-	} RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
-	} RLC_FINALLY {
-		fb_free(r);
-		fb_free(s);
-		fb_free(t);
-		fb_free(u);
-		fb_free(v);
-	}
-}
-
-#endif
-
 #if FB_INV == LOWER || !defined(STRIP)
 
 void fb_inv_lower(fb_t c, const fb_t a) {
-	if (fb_is_zero(a)) {
-		RLC_THROW(ERR_NO_VALID);
-	}
-
 	fb_invn_low(c, a);
 }
 #endif
 
 void fb_inv_sim(fb_t *c, const fb_t *a, int n) {
 	int i;
-	fb_t u, *t = RLC_ALLOCA(fb_t, n);
+	fb_t u, t[n];
 
-	if (t == NULL) {
-		RLC_THROW(ERR_NO_MEMORY);
+	for (i = 0; i < n; i++) {
+		fb_null(t[i]);
 	}
-
 	fb_null(u);
 
-	RLC_TRY {
+	TRY {
 		for (i = 0; i < n; i++) {
-			fb_null(t[i]);
 			fb_new(t[i]);
 		}
 		fb_new(u);
@@ -681,14 +570,13 @@ void fb_inv_sim(fb_t *c, const fb_t *a, int n) {
 		}
 		fb_copy(c[0], u);
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		for (i = 0; i < n; i++) {
 			fb_free(t[i]);
 		}
 		fb_free(u);
-		RLC_FREE(t);
 	}
 }

@@ -28,9 +28,9 @@
  * @ingroup fb
  */
 
-#include "relic_fb.h"
-#include "relic_fb_low.h"
-#include "relic_util.h"
+#include <relic_fb.h>
+#include <relic_fb_low.h>
+#include <relic_util.h>
 
 /*============================================================================*/
 /* Public definitions                                                         */
@@ -45,52 +45,52 @@ void fb_rdc1_low(dig_t *c, dig_t *a) {
 
 	sh = lh = rh = sa = la = ra = sb = lb = rb = sc = lc = rc = 0;
 
-	RLC_RIP(rh, sh, RLC_FB_BITS);
+	SPLIT(rh, sh, FB_BITS, FB_DIG_LOG);
 	sh++;
-	lh = RLC_DIG - rh;
+	lh = FB_DIGIT - rh;
 
-	RLC_RIP(ra, sa, RLC_FB_BITS - fa);
+	SPLIT(ra, sa, FB_BITS - fa, FB_DIG_LOG);
 	sa++;
-	la = RLC_DIG - ra;
+	la = FB_DIGIT - ra;
 
 	if (fb != -1) {
-		RLC_RIP(rb, sb, RLC_FB_BITS - fb);
+		SPLIT(rb, sb, FB_BITS - fb, FB_DIG_LOG);
 		sb++;
-		lb = RLC_DIG - rb;
+		lb = FB_DIGIT - rb;
 
-		RLC_RIP(rc, sc, RLC_FB_BITS - fc);
+		SPLIT(rc, sc, FB_BITS - fc, FB_DIG_LOG);
 		sc++;
-		lc = RLC_DIG - rc;
+		lc = FB_DIGIT - rc;
 	}
 
-	d = a[RLC_FB_DIGS];
-	a[RLC_FB_DIGS] = 0;
+	d = a[FB_DIGS];
+	a[FB_DIGS] = 0;
 
 	if (rh == 0) {
-		a[RLC_FB_DIGS - sh + 1] ^= d;
+		a[FB_DIGS - sh + 1] ^= d;
 	} else {
-		a[RLC_FB_DIGS - sh + 1] ^= (d >> rh);
-		a[RLC_FB_DIGS - sh] ^= (d << lh);
+		a[FB_DIGS - sh + 1] ^= (d >> rh);
+		a[FB_DIGS - sh] ^= (d << lh);
 	}
 	if (ra == 0) {
-		a[RLC_FB_DIGS - sa + 1] ^= d;
+		a[FB_DIGS - sa + 1] ^= d;
 	} else {
-		a[RLC_FB_DIGS - sa + 1] ^= (d >> ra);
-		a[RLC_FB_DIGS - sa] ^= (d << la);
+		a[FB_DIGS - sa + 1] ^= (d >> ra);
+		a[FB_DIGS - sa] ^= (d << la);
 	}
 
 	if (fb != -1) {
 		if (rb == 0) {
-			a[RLC_FB_DIGS - sb + 1] ^= d;
+			a[FB_DIGS - sb + 1] ^= d;
 		} else {
-			a[RLC_FB_DIGS - sb + 1] ^= (d >> rb);
-			a[RLC_FB_DIGS - sb] ^= (d << lb);
+			a[FB_DIGS - sb + 1] ^= (d >> rb);
+			a[FB_DIGS - sb] ^= (d << lb);
 		}
 		if (rc == 0) {
-			a[RLC_FB_DIGS - sc + 1] ^= d;
+			a[FB_DIGS - sc + 1] ^= d;
 		} else {
-			a[RLC_FB_DIGS - sc + 1] ^= (d >> rc);
-			a[RLC_FB_DIGS - sc] ^= (d << lc);
+			a[FB_DIGS - sc + 1] ^= (d >> rc);
+			a[FB_DIGS - sc] ^= (d << lc);
 		}
 	}
 

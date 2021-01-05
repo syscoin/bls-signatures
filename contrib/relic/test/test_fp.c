@@ -1,24 +1,23 @@
 /*
  * RELIC is an Efficient LIbrary for Cryptography
- * Copyright (C) 2007-2020 RELIC Authors
+ * Copyright (C) 2007-2017 RELIC Authors
  *
  * This file is part of RELIC. RELIC is legal property of its developers,
  * whose names are not listed here. Please refer to the COPYRIGHT file
  * for contact information.
  *
- * RELIC is free software; you can redistribute it and/or modify it under the
- * terms of the version 2.1 (or later) of the GNU Lesser General Public License
- * as published by the Free Software Foundation; or version 2.0 of the Apache
- * License as published by the Apache Software Foundation. See the LICENSE files
- * for more details.
+ * RELIC is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * RELIC is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the LICENSE files for more details.
+ * RELIC is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public or the
- * Apache License along with RELIC. If not, see <https://www.gnu.org/licenses/>
- * or <https://www.apache.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with RELIC. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -31,93 +30,136 @@
 
 #include <stdio.h>
 
-#include "relic.h"
-#include "relic_test.h"
-#include "relic_fp_low.h"
+#include <relic.h>
+#include <relic_test.h>
+#include <relic_fp_low.h>
 
 static int memory(void) {
 	err_t e;
-	int code = RLC_ERR;
+	int code = STS_ERR;
 	fp_t a;
 
 	fp_null(a);
 
-	RLC_TRY {
+	TRY {
 		TEST_BEGIN("memory can be allocated") {
 			fp_new(a);
 			fp_free(a);
 		} TEST_END;
-	} RLC_CATCH(e) {
+	} CATCH(e) {
 		switch (e) {
 			case ERR_NO_MEMORY:
 				util_print("FATAL ERROR!\n");
-				RLC_ERROR(end);
+				ERROR(end);
 				break;
 		}
 	}
 	(void)a;
-	code = RLC_OK;
+	code = STS_OK;
   end:
 	return code;
 }
 
 static int util(void) {
-	int bits, code = RLC_ERR;
-	/* Allocate two extra for sign and null terminator. */
-	char str[RLC_FP_BITS + 2];
-	uint8_t bin[RLC_FP_BYTES];
-	fp_t a, b;
-	bn_t c;
-	dig_t d;
+	int bits, code = STS_ERR;
+	char str[FP_BITS + 1];
+	uint8_t bin[FP_BYTES];
+	fp_t a, b, c;
+	bn_t d;
+	dig_t e;
 
 	fp_null(a);
 	fp_null(b);
-	bn_null(c);
+	fp_null(c);
+	bn_null(d);
 
-	RLC_TRY {
+	TRY {
 		fp_new(a);
 		fp_new(b);
-		bn_new(c);
+		fp_new(c);
+		bn_new(d);
+
+		TEST_BEGIN("comparison is consistent") {
+			fp_rand(a);
+			fp_rand(b);
+			if (fp_cmp(a, b) != CMP_EQ) {
+				if (fp_cmp(a, b) == CMP_GT) {
+					TEST_ASSERT(fp_cmp(b, a) == CMP_LT, end);
+				} else {
+					TEST_ASSERT(fp_cmp(b, a) == CMP_GT, end);
+				}
+			}
+		}
+		TEST_END;
 
 		TEST_BEGIN("copy and comparison are consistent") {
 			fp_rand(a);
+			fp_rand(c);
 			fp_rand(b);
-			if (fp_cmp(a, b) != RLC_EQ) {
-				fp_copy(b, a);
-				TEST_ASSERT(fp_cmp(a, b) == RLC_EQ, end);
+			if (fp_cmp(a, c) != CMP_EQ) {
+				fp_copy(c, a);
+				TEST_ASSERT(fp_cmp(c, a) == CMP_EQ, end);
+			}
+			if (fp_cmp(b, c) != CMP_EQ) {
+				fp_copy(c, b);
+				TEST_ASSERT(fp_cmp(b, c) == CMP_EQ, end);
 			}
 		}
 		TEST_END;
 
 		TEST_BEGIN("negation is consistent") {
-			fp_zero(a);
-			fp_neg(b, a);
-			TEST_ASSERT(dv_cmp(a, b, RLC_FP_DIGS) == RLC_EQ, end);
 			fp_rand(a);
 			fp_neg(b, a);
-			if (fp_cmp(a, b) != RLC_EQ) {
-				if (dv_cmp(a, b, RLC_FP_DIGS) == RLC_GT) {
-					TEST_ASSERT(dv_cmp(b, a, RLC_FP_DIGS) == RLC_LT, end);
+			if (fp_cmp(a, b) != CMP_EQ) {
+				if (fp_cmp(a, b) == CMP_GT) {
+					TEST_ASSERT(fp_cmp(b, a) == CMP_LT, end);
 				} else {
-					TEST_ASSERT(dv_cmp(b, a, RLC_FP_DIGS) == RLC_GT, end);
+					TEST_ASSERT(fp_cmp(b, a) == CMP_GT, end);
 				}
 			}
 			fp_neg(b, b);
-			TEST_ASSERT(dv_cmp(a, b, RLC_FP_DIGS) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(a, b) == CMP_EQ, end);
 		}
 		TEST_END;
 
-		TEST_BEGIN("assignment and comparison are consistent") {
+		TEST_BEGIN("assignment to zero and comparison are consistent") {
 			do {
 				fp_rand(a);
 			} while (fp_is_zero(a));
-			fp_zero(b);
-			TEST_ASSERT(fp_cmp(a, b) == RLC_NE, end);
-			TEST_ASSERT(fp_cmp(b, a) == RLC_NE, end);
-			TEST_ASSERT(fp_is_zero(b), end);
-			rand_bytes((uint8_t *)&d, (RLC_DIG / 8));
-			fp_set_dig(a, d);
-			TEST_ASSERT(fp_cmp_dig(a, d) == RLC_EQ, end);
+			fp_zero(c);
+			TEST_ASSERT(fp_cmp(a, c) == CMP_GT, end);
+			TEST_ASSERT(fp_cmp(c, a) == CMP_LT, end);
+		}
+		TEST_END;
+
+		TEST_BEGIN("assignment to random and comparison are consistent") {
+			do {
+				fp_rand(a);
+				fp_rand(b);
+			} while (fp_is_zero(a) || fp_is_zero(b));
+			fp_zero(c);
+			TEST_ASSERT(fp_cmp(a, c) == CMP_GT, end);
+			TEST_ASSERT(fp_cmp(b, c) == CMP_GT, end);
+			if (fp_cmp(a, b) != CMP_EQ) {
+				if (fp_cmp(a, b) == CMP_GT) {
+					TEST_ASSERT(fp_cmp(b, a) == CMP_LT, end);
+				} else {
+					TEST_ASSERT(fp_cmp(b, a) == CMP_GT, end);
+				}
+			}
+		}
+		TEST_END;
+
+		TEST_BEGIN("assignment to zero and zero test are consistent") {
+			fp_zero(a);
+			TEST_ASSERT(fp_is_zero(a), end);
+		}
+		TEST_END;
+
+		TEST_BEGIN("assignment to a constant and comparison are consistent") {
+			rand_bytes((uint8_t *)&e, (FP_DIGIT / 8));
+			fp_set_dig(a, e);
+			TEST_ASSERT(fp_cmp_dig(a, e) == CMP_EQ, end);
 		}
 		TEST_END;
 
@@ -128,7 +170,7 @@ static int util(void) {
 			TEST_ASSERT(fp_get_bit(a, bits) == 1, end);
 			fp_set_bit(a, bits, 0);
 			TEST_ASSERT(fp_get_bit(a, bits) == 0, end);
-			bits = (bits + 1) % RLC_FP_BITS;
+			bits = (bits + 1) % RELIC_BN_BITS;
 		}
 		TEST_END;
 
@@ -137,50 +179,45 @@ static int util(void) {
 			fp_zero(a);
 			fp_set_bit(a, bits, 1);
 			TEST_ASSERT(fp_bits(a) == bits + 1, end);
-			bits = (bits + 1) % RLC_FP_BITS;
+			bits = (bits + 1) % FP_BITS;
 		}
 		TEST_END;
 
 		TEST_BEGIN("reading and writing a prime field element are consistent") {
+			fp_rand(a);
 			for (int j = 2; j <= 64; j++) {
-				fp_rand(a);
 				bits = fp_size_str(a, j);
 				fp_write_str(str, bits, a, j);
-				fp_read_str(b, str, strlen(str), j);
-				TEST_ASSERT(fp_cmp(a, b) == RLC_EQ, end);
-				/* Test also negative integers. */
-				memmove(str + 1, str, strlen(str) + 1);
-				str[0] = '-';
-				fp_read_str(b, str, strlen(str), j);
-				fp_neg(a, a);
-				TEST_ASSERT(fp_cmp(a, b) == RLC_EQ, end);
+				fp_read_str(b, str, bits, j);
+				TEST_ASSERT(fp_cmp(a, b) == CMP_EQ, end);
 			}
 			fp_write_bin(bin, sizeof(bin), a);
 			fp_read_bin(b, bin, sizeof(bin));
-			TEST_ASSERT(fp_cmp(a, b) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(a, b) == CMP_EQ, end);
 		}
 		TEST_END;
 
 		TEST_BEGIN("getting the size of a prime field element is correct") {
 			fp_rand(a);
-			fp_prime_back(c, a);
-			TEST_ASSERT(fp_size_str(a, 2) == (1 + bn_bits(c)), end);
+			fp_prime_back(d, a);
+			TEST_ASSERT((fp_size_str(a, 2) - 1) == bn_bits(d), end);
 		}
 		TEST_END;
 	}
-	RLC_CATCH_ANY {
-		RLC_ERROR(end);
+	CATCH_ANY {
+		ERROR(end);
 	}
-	code = RLC_OK;
+	code = STS_OK;
   end:
 	fp_free(a);
 	fp_free(b);
-	bn_free(c);
+	fp_free(c);
+	bn_free(d);
 	return code;
 }
 
 static int addition(void) {
-	int code = RLC_ERR;
+	int code = STS_ERR;
 	fp_t a, b, c, d, e;
 
 	fp_null(a);
@@ -189,7 +226,7 @@ static int addition(void) {
 	fp_null(d);
 	fp_null(e);
 
-	RLC_TRY {
+	TRY {
 		fp_new(a);
 		fp_new(b);
 		fp_new(c);
@@ -201,7 +238,7 @@ static int addition(void) {
 			fp_rand(b);
 			fp_add(d, a, b);
 			fp_add(e, b, a);
-			TEST_ASSERT(fp_cmp(d, e) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(d, e) == CMP_EQ, end);
 		} TEST_END;
 
 		TEST_BEGIN("addition is associative") {
@@ -212,14 +249,14 @@ static int addition(void) {
 			fp_add(d, d, c);
 			fp_add(e, b, c);
 			fp_add(e, a, e);
-			TEST_ASSERT(fp_cmp(d, e) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(d, e) == CMP_EQ, end);
 		} TEST_END;
 
 		TEST_BEGIN("addition has identity") {
 			fp_rand(a);
 			fp_zero(d);
 			fp_add(e, a, d);
-			TEST_ASSERT(fp_cmp(e, a) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(e, a) == CMP_EQ, end);
 		} TEST_END;
 
 		TEST_BEGIN("addition has inverse") {
@@ -235,7 +272,7 @@ static int addition(void) {
 			fp_rand(b);
 			fp_add(d, a, b);
 			fp_add_basic(e, a, b);
-			TEST_ASSERT(fp_cmp(d, e) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(d, e) == CMP_EQ, end);
 		} TEST_END;
 #endif
 
@@ -245,14 +282,14 @@ static int addition(void) {
 			fp_rand(b);
 			fp_add(d, a, b);
 			fp_add_integ(e, a, b);
-			TEST_ASSERT(fp_cmp(d, e) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(d, e) == CMP_EQ, end);
 		} TEST_END;
 #endif
 	}
-	RLC_CATCH_ANY {
-		RLC_ERROR(end);
+	CATCH_ANY {
+		ERROR(end);
 	}
-	code = RLC_OK;
+	code = STS_OK;
   end:
 	fp_free(a);
 	fp_free(b);
@@ -263,7 +300,7 @@ static int addition(void) {
 }
 
 static int subtraction(void) {
-	int code = RLC_ERR;
+	int code = STS_ERR;
 	fp_t a, b, c, d;
 
 	fp_null(a);
@@ -271,7 +308,7 @@ static int subtraction(void) {
 	fp_null(c);
 	fp_null(d);
 
-	RLC_TRY {
+	TRY {
 		fp_new(a);
 		fp_new(b);
 		fp_new(c);
@@ -283,7 +320,7 @@ static int subtraction(void) {
 			fp_sub(c, a, b);
 			fp_sub(d, b, a);
 			fp_neg(d, d);
-			TEST_ASSERT(fp_cmp(c, d) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(c, d) == CMP_EQ, end);
 		}
 		TEST_END;
 
@@ -291,7 +328,7 @@ static int subtraction(void) {
 			fp_rand(a);
 			fp_zero(c);
 			fp_sub(d, a, c);
-			TEST_ASSERT(fp_cmp(d, a) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(d, a) == CMP_EQ, end);
 		}
 		TEST_END;
 
@@ -308,7 +345,7 @@ static int subtraction(void) {
 			fp_rand(b);
 			fp_sub(c, a, b);
 			fp_sub_basic(d, a, b);
-			TEST_ASSERT(fp_cmp(c, d) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(c, d) == CMP_EQ, end);
 		} TEST_END;
 #endif
 
@@ -318,7 +355,7 @@ static int subtraction(void) {
 			fp_rand(b);
 			fp_sub(c, a, b);
 			fp_sub_integ(d, a, b);
-			TEST_ASSERT(fp_cmp(c, d) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(c, d) == CMP_EQ, end);
 		} TEST_END;
 #endif
 
@@ -327,7 +364,7 @@ static int subtraction(void) {
 			fp_rand(a);
 			fp_neg(c, a);
 			fp_neg_basic(d, a);
-			TEST_ASSERT(fp_cmp(c, d) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(c, d) == CMP_EQ, end);
 		} TEST_END;
 #endif
 
@@ -336,14 +373,14 @@ static int subtraction(void) {
 			fp_rand(a);
 			fp_neg(c, a);
 			fp_neg_integ(d, a);
-			TEST_ASSERT(fp_cmp(c, d) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(c, d) == CMP_EQ, end);
 		} TEST_END;
 #endif
 	}
-	RLC_CATCH_ANY {
-		RLC_ERROR(end);
+	CATCH_ANY {
+		ERROR(end);
 	}
-	code = RLC_OK;
+	code = STS_OK;
   end:
 	fp_free(a);
 	fp_free(b);
@@ -353,7 +390,7 @@ static int subtraction(void) {
 }
 
 static int multiplication(void) {
-	int code = RLC_ERR;
+	int code = STS_ERR;
 	fp_t a, b, c, d, e, f;
 
 	fp_null(a);
@@ -363,7 +400,7 @@ static int multiplication(void) {
 	fp_null(e);
 	fp_null(f);
 
-	RLC_TRY {
+	TRY {
 		fp_new(a);
 		fp_new(b);
 		fp_new(c);
@@ -376,7 +413,7 @@ static int multiplication(void) {
 			fp_rand(b);
 			fp_mul(d, a, b);
 			fp_mul(e, b, a);
-			TEST_ASSERT(fp_cmp(d, e) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(d, e) == CMP_EQ, end);
 		} TEST_END;
 
 		TEST_BEGIN("multiplication is associative") {
@@ -387,7 +424,7 @@ static int multiplication(void) {
 			fp_mul(d, d, c);
 			fp_mul(e, b, c);
 			fp_mul(e, a, e);
-			TEST_ASSERT(fp_cmp(d, e) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(d, e) == CMP_EQ, end);
 		} TEST_END;
 
 		TEST_BEGIN("multiplication is distributive") {
@@ -399,14 +436,14 @@ static int multiplication(void) {
 			fp_mul(e, c, a);
 			fp_mul(f, c, b);
 			fp_add(e, e, f);
-			TEST_ASSERT(fp_cmp(d, e) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(d, e) == CMP_EQ, end);
 		} TEST_END;
 
 		TEST_BEGIN("multiplication has identity") {
 			fp_rand(a);
 			fp_set_dig(d, 1);
 			fp_mul(e, a, d);
-			TEST_ASSERT(fp_cmp(e, a) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(e, a) == CMP_EQ, end);
 		} TEST_END;
 
 		TEST_BEGIN("multiplication has zero property") {
@@ -422,7 +459,7 @@ static int multiplication(void) {
 			fp_rand(b);
 			fp_mul(c, a, b);
 			fp_mul_basic(d, a, b);
-			TEST_ASSERT(fp_cmp(c, d) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(c, d) == CMP_EQ, end);
 		}
 		TEST_END;
 #endif
@@ -433,7 +470,7 @@ static int multiplication(void) {
 			fp_rand(b);
 			fp_mul(c, a, b);
 			fp_mul_integ(d, a, b);
-			TEST_ASSERT(fp_cmp(c, d) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(c, d) == CMP_EQ, end);
 		}
 		TEST_END;
 #endif
@@ -444,7 +481,7 @@ static int multiplication(void) {
 			fp_rand(b);
 			fp_mul(c, a, b);
 			fp_mul_comba(d, a, b);
-			TEST_ASSERT(fp_cmp(c, d) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(c, d) == CMP_EQ, end);
 		}
 		TEST_END;
 #endif
@@ -455,15 +492,15 @@ static int multiplication(void) {
 			fp_rand(b);
 			fp_mul(c, a, b);
 			fp_mul_karat(d, a, b);
-			TEST_ASSERT(fp_cmp(c, d) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(c, d) == CMP_EQ, end);
 		}
 		TEST_END;
 #endif
 	}
-	RLC_CATCH_ANY {
-		RLC_ERROR(end);
+	CATCH_ANY {
+		ERROR(end);
 	}
-	code = RLC_OK;
+	code = STS_OK;
   end:
 	fp_free(a);
 	fp_free(b);
@@ -475,14 +512,14 @@ static int multiplication(void) {
 }
 
 static int squaring(void) {
-	int code = RLC_ERR;
+	int code = STS_ERR;
 	fp_t a, b, c;
 
 	fp_null(a);
 	fp_null(b);
 	fp_null(c);
 
-	RLC_TRY {
+	TRY {
 		fp_new(a);
 		fp_new(b);
 		fp_new(c);
@@ -491,7 +528,7 @@ static int squaring(void) {
 			fp_rand(a);
 			fp_mul(b, a, a);
 			fp_sqr(c, a);
-			TEST_ASSERT(fp_cmp(b, c) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(b, c) == CMP_EQ, end);
 		} TEST_END;
 
 #if FP_SQR == BASIC || !defined(STRIP)
@@ -499,7 +536,7 @@ static int squaring(void) {
 			fp_rand(a);
 			fp_sqr(b, a);
 			fp_sqr_basic(c, a);
-			TEST_ASSERT(fp_cmp(b, c) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(b, c) == CMP_EQ, end);
 		} TEST_END;
 #endif
 
@@ -508,7 +545,7 @@ static int squaring(void) {
 			fp_rand(a);
 			fp_sqr(b, a);
 			fp_sqr_integ(c, a);
-			TEST_ASSERT(fp_cmp(b, c) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(b, c) == CMP_EQ, end);
 		} TEST_END;
 #endif
 
@@ -517,7 +554,7 @@ static int squaring(void) {
 			fp_rand(a);
 			fp_sqr(b, a);
 			fp_sqr_comba(c, a);
-			TEST_ASSERT(fp_cmp(b, c) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(b, c) == CMP_EQ, end);
 		} TEST_END;
 #endif
 
@@ -526,14 +563,14 @@ static int squaring(void) {
 			fp_rand(a);
 			fp_sqr(b, a);
 			fp_sqr_karat(c, a);
-			TEST_ASSERT(fp_cmp(b, c) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(b, c) == CMP_EQ, end);
 		} TEST_END;
 #endif
 	}
-	RLC_CATCH_ANY {
-		RLC_ERROR(end);
+	CATCH_ANY {
+		ERROR(end);
 	}
-	code = RLC_OK;
+	code = STS_OK;
   end:
 	fp_free(a);
 	fp_free(b);
@@ -542,14 +579,14 @@ static int squaring(void) {
 }
 
 static int doubling_halving(void) {
-	int code = RLC_ERR;
+	int code = STS_ERR;
 	fp_t a, b, c;
 
 	fp_null(a);
 	fp_null(b);
 	fp_null(c);
 
-	RLC_TRY {
+	TRY {
 		fp_new(a);
 		fp_new(b);
 		fp_new(c);
@@ -558,7 +595,7 @@ static int doubling_halving(void) {
 			fp_rand(a);
 			fp_add(b, a, a);
 			fp_dbl(c, a);
-			TEST_ASSERT(fp_cmp(b, c) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(b, c) == CMP_EQ, end);
 		} TEST_END;
 
 #if FP_ADD == BASIC || !defined(STRIP)
@@ -566,7 +603,7 @@ static int doubling_halving(void) {
 			fp_rand(a);
 			fp_dbl(b, a);
 			fp_dbl_basic(c, a);
-			TEST_ASSERT(fp_cmp(b, c) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(b, c) == CMP_EQ, end);
 		} TEST_END;
 #endif
 
@@ -575,7 +612,7 @@ static int doubling_halving(void) {
 			fp_rand(a);
 			fp_dbl(b, a);
 			fp_dbl_integ(c, a);
-			TEST_ASSERT(fp_cmp(b, c) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(b, c) == CMP_EQ, end);
 		} TEST_END;
 #endif
 
@@ -583,7 +620,7 @@ static int doubling_halving(void) {
 			fp_rand(a);
 			fp_dbl(b, a);
 			fp_hlv(c, b);
-			TEST_ASSERT(fp_cmp(c, a) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(c, a) == CMP_EQ, end);
 		}
 		TEST_END;
 
@@ -592,7 +629,7 @@ static int doubling_halving(void) {
 			fp_rand(a);
 			fp_hlv(b, a);
 			fp_hlv_basic(c, a);
-			TEST_ASSERT(fp_cmp(b, c) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(b, c) == CMP_EQ, end);
 		} TEST_END;
 #endif
 
@@ -601,15 +638,15 @@ static int doubling_halving(void) {
 			fp_rand(a);
 			fp_hlv(b, a);
 			fp_hlv_integ(c, a);
-			TEST_ASSERT(fp_cmp(b, c) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(b, c) == CMP_EQ, end);
 		} TEST_END;
 #endif
 	}
-	RLC_CATCH_ANY {
+	CATCH_ANY {
 		util_print("FATAL ERROR!\n");
-		RLC_ERROR(end);
+		ERROR(end);
 	}
-	code = RLC_OK;
+	code = STS_OK;
   end:
 	fp_free(a);
 	fp_free(b);
@@ -618,72 +655,72 @@ static int doubling_halving(void) {
 }
 
 static int shifting(void) {
-	int code = RLC_ERR;
+	int code = STS_ERR;
 	fp_t a, b, c;
 
 	fp_null(a);
 	fp_null(b);
 	fp_null(c);
 
-	RLC_TRY {
+	TRY {
 		fp_new(a);
 		fp_new(b);
 		fp_new(c);
 
 		TEST_BEGIN("shifting by 1 bit is consistent") {
 			fp_rand(a);
-			a[RLC_FP_DIGS - 1] = 0;
+			a[FP_DIGS - 1] = 0;
 			fp_lsh(b, a, 1);
 			fp_rsh(c, b, 1);
-			TEST_ASSERT(fp_cmp(c, a) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(c, a) == CMP_EQ, end);
 		} TEST_END;
 
 		TEST_BEGIN("shifting by 2 bits is consistent") {
 			fp_rand(a);
-			a[RLC_FP_DIGS - 1] = 0;
+			a[FP_DIGS - 1] = 0;
 			fp_lsh(b, a, 2);
 			fp_rsh(c, b, 2);
-			TEST_ASSERT(fp_cmp(c, a) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(c, a) == CMP_EQ, end);
 		} TEST_END;
 
 		TEST_BEGIN("shifting by half digit is consistent") {
 			fp_rand(a);
-			a[RLC_FP_DIGS - 1] = 0;
-			fp_lsh(b, a, RLC_DIG / 2);
-			fp_rsh(c, b, RLC_DIG / 2);
-			TEST_ASSERT(fp_cmp(c, a) == RLC_EQ, end);
+			a[FP_DIGS - 1] = 0;
+			fp_lsh(b, a, FP_DIGIT / 2);
+			fp_rsh(c, b, FP_DIGIT / 2);
+			TEST_ASSERT(fp_cmp(c, a) == CMP_EQ, end);
 		} TEST_END;
 
 		TEST_BEGIN("shifting by 1 digit is consistent") {
 			fp_rand(a);
-			a[RLC_FP_DIGS - 1] = 0;
-			fp_lsh(b, a, RLC_DIG);
-			fp_rsh(c, b, RLC_DIG);
-			TEST_ASSERT(fp_cmp(c, a) == RLC_EQ, end);
+			a[FP_DIGS - 1] = 0;
+			fp_lsh(b, a, FP_DIGIT);
+			fp_rsh(c, b, FP_DIGIT);
+			TEST_ASSERT(fp_cmp(c, a) == CMP_EQ, end);
 		} TEST_END;
 
 		TEST_BEGIN("shifting by 2 digits is consistent") {
 			fp_rand(a);
-			a[RLC_FP_DIGS - 1] = 0;
-			a[RLC_FP_DIGS - 2] = 0;
-			fp_lsh(b, a, 2 * RLC_DIG);
-			fp_rsh(c, b, 2 * RLC_DIG);
-			TEST_ASSERT(fp_cmp(c, a) == RLC_EQ, end);
+			a[FP_DIGS - 1] = 0;
+			a[FP_DIGS - 2] = 0;
+			fp_lsh(b, a, 2 * FP_DIGIT);
+			fp_rsh(c, b, 2 * FP_DIGIT);
+			TEST_ASSERT(fp_cmp(c, a) == CMP_EQ, end);
 		} TEST_END;
 
 		TEST_BEGIN("shifting by 1 digit and half is consistent") {
 			fp_rand(a);
-			a[RLC_FP_DIGS - 1] = 0;
-			a[RLC_FP_DIGS - 2] = 0;
-			fp_lsh(b, a, RLC_DIG + RLC_DIG / 2);
-			fp_rsh(c, b, (RLC_DIG + RLC_DIG / 2));
-			TEST_ASSERT(fp_cmp(c, a) == RLC_EQ, end);
+			a[FP_DIGS - 1] = 0;
+			a[FP_DIGS - 2] = 0;
+			fp_lsh(b, a, FP_DIGIT + FP_DIGIT / 2);
+			fp_rsh(c, b, (FP_DIGIT + FP_DIGIT / 2));
+			TEST_ASSERT(fp_cmp(c, a) == CMP_EQ, end);
 		} TEST_END;
 	}
-	RLC_CATCH_ANY {
-		RLC_ERROR(end);
+	CATCH_ANY {
+		ERROR(end);
 	}
-	code = RLC_OK;
+	code = STS_OK;
   end:
 	fp_free(a);
 	fp_free(b);
@@ -692,7 +729,7 @@ static int shifting(void) {
 }
 
 static int reduction(void) {
-	int code = RLC_ERR;
+	int code = STS_ERR;
 	fp_t a, b;
 	dv_t t;
 
@@ -700,15 +737,15 @@ static int reduction(void) {
 	fp_null(b);
 	dv_null(t);
 
-	RLC_TRY {
+	TRY {
 		fp_new(a);
 		fp_new(b);
 		dv_new(t);
-		dv_zero(t, 2 * RLC_FP_DIGS);
+		dv_zero(t, 2 * FP_DIGS);
 
 		TEST_BEGIN("modular reduction is correct") {
 			fp_rand(a);
-			dv_copy(t, fp_prime_get(), RLC_FP_DIGS);
+			dv_copy(t, fp_prime_get(), FP_DIGS);
 			/* Test if a * p mod p == 0. */
 			fp_mul(b, a, t);
 			TEST_ASSERT(fp_is_zero(b) == 1, end);
@@ -744,10 +781,10 @@ static int reduction(void) {
 		}
 #endif
 	}
-	RLC_CATCH_ANY {
-		RLC_ERROR(end);
+	CATCH_ANY {
+		ERROR(end);
 	}
-	code = RLC_OK;
+	code = STS_OK;
   end:
 	fb_free(a);
 	fb_free(b);
@@ -756,7 +793,7 @@ static int reduction(void) {
 }
 
 static int inversion(void) {
-	int code = RLC_ERR;
+	int code = STS_ERR;
 	fp_t a, b, c, d[2];
 
 	fp_null(a);
@@ -765,7 +802,7 @@ static int inversion(void) {
 	fp_null(d[0]);
 	fp_null(d[1]);
 
-	RLC_TRY {
+	TRY {
 		fp_new(a);
 		fp_new(b);
 		fp_new(c);
@@ -773,99 +810,74 @@ static int inversion(void) {
 		fp_new(d[1]);
 
 		TEST_BEGIN("inversion is correct") {
-			do {
-				fp_rand(a);
-			} while (fp_is_zero(a));
+			fp_rand(a);
 			fp_inv(b, a);
 			fp_mul(c, a, b);
 			fp_set_dig(b, 1);
-			TEST_ASSERT(fp_cmp(c, b) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(c, b) == CMP_EQ, end);
 		} TEST_END;
 
 #if FP_INV == BASIC || !defined(STRIP)
 		TEST_BEGIN("basic inversion is correct") {
-			do {
-				fp_rand(a);
-			} while (fp_is_zero(a));
+			fp_rand(a);
 			fp_inv(b, a);
 			fp_inv_basic(c, a);
-			TEST_ASSERT(fp_cmp(c, b) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(c, b) == CMP_EQ, end);
 		} TEST_END;
 #endif
 
 #if FP_INV == BINAR || !defined(STRIP)
 		TEST_BEGIN("binary inversion is correct") {
-			do {
-				fp_rand(a);
-			} while (fp_is_zero(a));
+			fp_rand(a);
 			fp_inv(b, a);
 			fp_inv_binar(c, a);
-			TEST_ASSERT(fp_cmp(c, b) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(c, b) == CMP_EQ, end);
 		} TEST_END;
 #endif
 
 #if FP_INV == MONTY || !defined(STRIP)
 		TEST_BEGIN("montgomery inversion is correct") {
-			do {
-				fp_rand(a);
-			} while (fp_is_zero(a));
+			fp_rand(a);
 			fp_inv(b, a);
 			fp_inv_monty(c, a);
-			TEST_ASSERT(fp_cmp(c, b) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(c, b) == CMP_EQ, end);
 		} TEST_END;
 #endif
 
 #if FP_INV == EXGCD || !defined(STRIP)
 		TEST_BEGIN("euclidean inversion is correct") {
-			do {
-				fp_rand(a);
-			} while (fp_is_zero(a));
+			fp_rand(a);
 			fp_inv(b, a);
 			fp_inv_exgcd(c, a);
-			TEST_ASSERT(fp_cmp(c, b) == RLC_EQ, end);
-		} TEST_END;
-#endif
-
-#if FP_INV == DIVST || !defined(STRIP)
-		TEST_BEGIN("division step inversion is correct") {
-			do {
-				fp_rand(a);
-			} while (fp_is_zero(a));
-			fp_inv(b, a);
-			fp_inv_divst(c, a);
-			TEST_ASSERT(fp_cmp(c, b) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(c, b) == CMP_EQ, end);
 		} TEST_END;
 #endif
 
 #if FP_INV == LOWER || !defined(STRIP)
 		TEST_BEGIN("lower inversion is correct") {
-			do {
-				fp_rand(a);
-			} while (fp_is_zero(a));
+			fp_rand(a);
 			fp_inv(b, a);
 			fp_inv_lower(c, a);
-			TEST_ASSERT(fp_cmp(c, b) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(c, b) == CMP_EQ, end);
 		} TEST_END;
 #endif
 
 		TEST_BEGIN("simultaneous inversion is correct") {
-			do {
-				fp_rand(a);
-				fp_rand(b);
-			} while (fp_is_zero(a) || fp_is_zero(b));
+			fp_rand(a);
+			fp_rand(b);
 			fp_copy(d[0], a);
 			fp_copy(d[1], b);
 			fp_inv(a, a);
 			fp_inv(b, b);
 			fp_inv_sim(d, (const fp_t *)d, 2);
-			TEST_ASSERT(fp_cmp(d[0], a) == RLC_EQ &&
-					fp_cmp(d[1], b) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(d[0], a) == CMP_EQ &&
+					fp_cmp(d[1], b) == CMP_EQ, end);
 		} TEST_END;
 	}
-	RLC_CATCH_ANY {
-		RLC_ERROR(end);
+	CATCH_ANY {
+		ERROR(end);
 	}
-	code = RLC_OK;
+	code = STS_OK;
   end:
 	fp_free(a);
 	fp_free(b);
@@ -876,7 +888,7 @@ static int inversion(void) {
 }
 
 static int exponentiation(void) {
-	int code = RLC_ERR;
+	int code = STS_ERR;
 	fp_t a, b, c;
 	bn_t d;
 
@@ -885,7 +897,7 @@ static int exponentiation(void) {
 	fp_null(c);
 	bn_null(d);
 
-	RLC_TRY {
+	TRY {
 		fp_new(a);
 		fp_new(b);
 		fp_new(c);
@@ -895,31 +907,31 @@ static int exponentiation(void) {
 			fp_rand(a);
 			bn_zero(d);
 			fp_exp(c, a, d);
-			TEST_ASSERT(fp_cmp_dig(c, 1) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp_dig(c, 1) == CMP_EQ, end);
 			bn_set_dig(d, 1);
 			fp_exp(c, a, d);
-			TEST_ASSERT(fp_cmp(c, a) == RLC_EQ, end);
-			bn_rand(d, RLC_POS, RLC_FP_BITS);
+			TEST_ASSERT(fp_cmp(c, a) == CMP_EQ, end);
+			bn_rand(d, BN_POS, FP_BITS);
 			fp_exp(b, a, d);
 			bn_neg(d, d);
 			fp_exp(c, a, d);
 			fp_inv(c, c);
-			TEST_ASSERT(fp_cmp(b, c) == RLC_EQ, end);
-			d->sign = RLC_POS;
-			d->used = RLC_FP_DIGS;
-			dv_copy(d->dp, fp_prime_get(), RLC_FP_DIGS);
+			TEST_ASSERT(fp_cmp(b, c) == CMP_EQ, end);
+			d->sign = BN_POS;
+			d->used = FP_DIGS;
+			dv_copy(d->dp, fp_prime_get(), FP_DIGS);
 			fp_exp(c, a, d);
-			TEST_ASSERT(fp_cmp(a, c) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(a, c) == CMP_EQ, end);
 		}
 		TEST_END;
 
 #if FP_EXP == BASIC || !defined(STRIP)
 		TEST_BEGIN("basic exponentiation is correct") {
 			fp_rand(a);
-			bn_rand(d, RLC_POS, RLC_FP_BITS);
+			bn_rand(d, BN_POS, FP_BITS);
 			fp_exp(c, a, d);
 			fp_exp_basic(b, a, d);
-			TEST_ASSERT(fp_cmp(b, c) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(b, c) == CMP_EQ, end);
 		}
 		TEST_END;
 #endif
@@ -927,10 +939,10 @@ static int exponentiation(void) {
 #if FP_EXP == SLIDE || !defined(STRIP)
 		TEST_BEGIN("sliding window exponentiation is correct") {
 			fp_rand(a);
-			bn_rand(d, RLC_POS, RLC_FP_BITS);
+			bn_rand(d, BN_POS, FP_BITS);
 			fp_exp(c, a, d);
 			fp_exp_slide(b, a, d);
-			TEST_ASSERT(fp_cmp(b, c) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(b, c) == CMP_EQ, end);
 		}
 		TEST_END;
 #endif
@@ -938,18 +950,18 @@ static int exponentiation(void) {
 #if FP_EXP == MONTY || !defined(STRIP)
 		TEST_BEGIN("constant-time exponentiation is correct") {
 			fp_rand(a);
-			bn_rand(d, RLC_POS, RLC_FP_BITS);
+			bn_rand(d, BN_POS, FP_BITS);
 			fp_exp(c, a, d);
 			fp_exp_monty(b, a, d);
-			TEST_ASSERT(fp_cmp(b, c) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(b, c) == CMP_EQ, end);
 		}
 		TEST_END;
 #endif
 	}
-	RLC_CATCH_ANY {
-		RLC_ERROR(end);
+	CATCH_ANY {
+		ERROR(end);
 	}
-	code = RLC_OK;
+	code = STS_OK;
   end:
 	fp_free(a);
 	fp_free(b);
@@ -959,14 +971,14 @@ static int exponentiation(void) {
 }
 
 static int square_root(void) {
-	int code = RLC_ERR;
+	int code = STS_ERR;
 	fp_t a, b, c;
 
 	fp_null(a);
 	fp_null(b);
 	fp_null(c);
 
-	RLC_TRY {
+	TRY {
 		fp_new(a);
 		fp_new(b);
 		fp_new(c);
@@ -976,19 +988,19 @@ static int square_root(void) {
 			fp_sqr(c, a);
 			TEST_ASSERT(fp_srt(b, c), end);
 			fp_neg(c, b);
-			TEST_ASSERT(fp_cmp(b, a) == RLC_EQ || fp_cmp(c, a) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(b, a) == CMP_EQ || fp_cmp(c, a) == CMP_EQ, end);
 			fp_rand(a);
 			if (fp_srt(b, a)) {
 				fp_sqr(c, b);
-				TEST_ASSERT(fp_cmp(c, a) == RLC_EQ, end);
+				TEST_ASSERT(fp_cmp(c, a) == CMP_EQ, end);
 			}
 		}
 		TEST_END;
 	}
-	RLC_CATCH_ANY {
-		RLC_ERROR(end);
+	CATCH_ANY {
+		ERROR(end);
 	}
-	code = RLC_OK;
+	code = STS_OK;
   end:
 	fp_free(a);
 	fp_free(b);
@@ -997,7 +1009,7 @@ static int square_root(void) {
 }
 
 static int digit(void) {
-	int code = RLC_ERR;
+	int code = STS_ERR;
 	fp_t a, b, c, d;
 	dig_t g;
 
@@ -1006,7 +1018,7 @@ static int digit(void) {
 	fp_null(c);
 	fp_null(d);
 
-	RLC_TRY {
+	TRY {
 		fp_new(a);
 		fp_new(b);
 		fp_new(c);
@@ -1015,43 +1027,43 @@ static int digit(void) {
 		TEST_BEGIN("addition of a single digit is consistent") {
 			fp_rand(a);
 			fp_rand(b);
-			for (int j = 1; j < RLC_FP_DIGS; j++)
+			for (int j = 1; j < FP_DIGS; j++)
 				b[j] = 0;
 			g = b[0];
 			fp_set_dig(b, g);
 			fp_add(c, a, b);
 			fp_add_dig(d, a, g);
-			TEST_ASSERT(fp_cmp(c, d) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(c, d) == CMP_EQ, end);
 		} TEST_END;
 
 		TEST_BEGIN("subtraction of a single digit is consistent") {
 			fp_rand(a);
 			fp_rand(b);
-			for (int j = 1; j < RLC_FP_DIGS; j++)
+			for (int j = 1; j < FP_DIGS; j++)
 				b[j] = 0;
 			g = b[0];
 			fp_set_dig(b, g);
 			fp_sub(c, a, b);
 			fp_sub_dig(d, a, g);
-			TEST_ASSERT(fp_cmp(c, d) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(c, d) == CMP_EQ, end);
 		} TEST_END;
 
 		TEST_BEGIN("multiplication by a single digit is consistent") {
 			fp_rand(a);
 			fp_rand(b);
-			for (int j = 1; j < RLC_FP_DIGS; j++)
+			for (int j = 1; j < FP_DIGS; j++)
 				b[j] = 0;
 			g = b[0];
 			fp_set_dig(b, g);
 			fp_mul(c, a, b);
 			fp_mul_dig(d, a, g);
-			TEST_ASSERT(fp_cmp(c, d) == RLC_EQ, end);
+			TEST_ASSERT(fp_cmp(c, d) == CMP_EQ, end);
 		} TEST_END;
 	}
-	RLC_CATCH_ANY {
-		RLC_ERROR(end);
+	CATCH_ANY {
+		ERROR(end);
 	}
-	code = RLC_OK;
+	code = STS_OK;
   end:
 	fp_free(a);
 	fp_free(b);
@@ -1061,84 +1073,84 @@ static int digit(void) {
 }
 
 int main(void) {
-	if (core_init() != RLC_OK) {
+	if (core_init() != STS_OK) {
 		core_clean();
 		return 1;
 	}
 
 	util_banner("Tests for the FP module", 0);
 
-	RLC_TRY {
+	TRY {
 		fp_param_set_any();
 		fp_param_print();
-	} RLC_CATCH_ANY {
+	} CATCH_ANY {
 		core_clean();
 		return 0;
 	}
 
 	util_banner("Utilities", 1);
-	if (memory() != RLC_OK) {
+	if (memory() != STS_OK) {
 		core_clean();
 		return 1;
 	}
 
-	if (util() != RLC_OK) {
+	if (util() != STS_OK) {
 		core_clean();
 		return 1;
 	}
 
 	util_banner("Arithmetic", 1);
-	if (addition() != RLC_OK) {
+	if (addition() != STS_OK) {
 		core_clean();
 		return 1;
 	}
 
-	if (subtraction() != RLC_OK) {
+	if (subtraction() != STS_OK) {
 		core_clean();
 		return 1;
 	}
 
-	if (multiplication() != RLC_OK) {
+	if (multiplication() != STS_OK) {
 		core_clean();
 		return 1;
 	}
 
-	if (squaring() != RLC_OK) {
+	if (squaring() != STS_OK) {
 		core_clean();
 		return 1;
 	}
 
-	if (doubling_halving() != RLC_OK) {
+	if (doubling_halving() != STS_OK) {
 		core_clean();
 		return 1;
 	}
 
-	if (shifting() != RLC_OK) {
+	if (shifting() != STS_OK) {
 		core_clean();
 		return 1;
 	}
 
-	if (reduction() != RLC_OK) {
+	if (reduction() != STS_OK) {
 		core_clean();
 		return 1;
 	}
 
-	if (inversion() != RLC_OK) {
+	if (inversion() != STS_OK) {
 		core_clean();
 		return 1;
 	}
 
-	if (exponentiation() != RLC_OK) {
+	if (exponentiation() != STS_OK) {
 		core_clean();
 		return 1;
 	}
 
-	if (square_root() != RLC_OK) {
+	if (square_root() != STS_OK) {
 		core_clean();
 		return 1;
 	}
 
-	if (digit() != RLC_OK) {
+	if (digit() != STS_OK) {
 		core_clean();
 		return 1;
 	}

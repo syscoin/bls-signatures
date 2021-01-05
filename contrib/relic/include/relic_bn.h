@@ -1,24 +1,23 @@
 /*
  * RELIC is an Efficient LIbrary for Cryptography
- * Copyright (C) 2007-2020 RELIC Authors
+ * Copyright (C) 2007-2017 RELIC Authors
  *
  * This file is part of RELIC. RELIC is legal property of its developers,
  * whose names are not listed here. Please refer to the COPYRIGHT file
  * for contact information.
  *
- * RELIC is free software; you can redistribute it and/or modify it under the
- * terms of the version 2.1 (or later) of the GNU Lesser General Public License
- * as published by the Free Software Foundation; or version 2.0 of the Apache
- * License as published by the Apache Software Foundation. See the LICENSE files
- * for more details.
+ * RELIC is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * RELIC is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the LICENSE files for more details.
+ * RELIC is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public or the
- * Apache License along with RELIC. If not, see <https://www.gnu.org/licenses/>
- * or <https://www.apache.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with RELIC. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -33,13 +32,12 @@
  * @ingroup bn
  */
 
-#ifndef RLC_BN_H
-#define RLC_BN_H
+#ifndef RELIC_BN_H
+#define RELIC_BN_H
 
-#include "relic_conf.h"
-#include "relic_util.h"
-#include "relic_types.h"
-#include "relic_label.h"
+#include <relic_conf.h>
+#include <relic_types.h>
+#include <relic_label.h>
 
 /*============================================================================*/
 /* Constant definitions                                                       */
@@ -53,33 +51,48 @@
  * multiple precision integer must grow. Otherwise, it represents the fixed
  * fixed precision.
  */
-#define RLC_BN_BITS 	((int)BN_PRECI)
+#define RELIC_BN_BITS 	((int)BN_PRECI)
+
+/**
+ * Size in bits of a digit.
+ */
+#define BN_DIGIT	((int)DIGIT)
+
+/**
+ * Logarithm of the digit size in base 2.
+ */
+#define BN_DIG_LOG	((int)DIGIT_LOG)
 
 /**
  * Size in digits of a block sufficient to store the required precision.
  */
-#define RLC_BN_DIGS		((int)RLC_CEIL(BN_PRECI, RLC_DIG))
+#define BN_DIGS		((int)((RELIC_BN_BITS)/(BN_DIGIT) + (RELIC_BN_BITS % BN_DIGIT > 0)))
+
+/**
+ * Size in bytes of a block sufficient to store the required precision.
+ */
+#define RELIC_BN_BYTES 	((int)((RELIC_BN_BITS)/8 + ((RELIC_BN_BITS % 8) > 0)))
 
 /**
  * Size in digits of a block sufficient to store a multiple precision integer.
  */
 #if BN_MAGNI == DOUBLE
-#define RLC_BN_SIZE		((int)(2 * RLC_BN_DIGS + 2))
+#define BN_SIZE		((int)(2 * BN_DIGS + 2))
 #elif BN_MAGNI == CARRY
-#define RLC_BN_SIZE		((int)(RLC_BN_DIGS + 1))
+#define BN_SIZE		((int)(BN_DIGS + 1))
 #elif BN_MAGNI == SINGLE
-#define RLC_BN_SIZE		((int)RLC_BN_DIGS)
+#define BN_SIZE		((int)BN_DIGS)
 #endif
 
 /**
  * Positive sign of a multiple precision integer.
  */
-#define RLC_POS		0
+#define BN_POS		0
 
 /**
  * Negative sign of a multiple precision integer.
  */
-#define RLC_NEG		1
+#define BN_NEG		1
 
 /*============================================================================*/
 /* Type definitions                                                           */
@@ -99,12 +112,12 @@ typedef struct {
 	int used;
 	/** The sign of this multiple precision integer. */
 	int sign;
-#if ALLOC == DYNAMIC
+#if ALLOC == DYNAMIC || ALLOC == STATIC
 	/** The sequence of contiguous digits that forms this integer. */
 	dig_t *dp;
 #elif ALLOC == STACK || ALLOC == AUTO
 	/** The sequence of contiguous digits that forms this integer. */
-	rlc_align dig_t dp[RLC_BN_SIZE];
+	relic_align dig_t dp[BN_SIZE];
 #endif
 } bn_st;
 
@@ -142,18 +155,26 @@ typedef bn_st *bn_t;
 #define bn_new(A)															\
 	A = (bn_t)calloc(1, sizeof(bn_st));										\
 	if ((A) == NULL) {														\
-		RLC_THROW(ERR_NO_MEMORY);												\
+		THROW(ERR_NO_MEMORY);												\
 	}																		\
-	bn_init(A, RLC_BN_SIZE);												\
+	bn_init(A, BN_SIZE);													\
+
+#elif ALLOC == STATIC
+#define bn_new(A)															\
+	A = (bn_t)alloca(sizeof(bn_st));										\
+	if ((A) != NULL) {														\
+		(A)->dp = NULL;														\
+	}																		\
+	bn_init(A, BN_SIZE);													\
 
 #elif ALLOC == AUTO
 #define bn_new(A)															\
-	bn_init(A, RLC_BN_SIZE);												\
+	bn_init(A, BN_SIZE);													\
 
 #elif ALLOC == STACK
 #define bn_new(A)															\
 	A = (bn_t)alloca(sizeof(bn_st));										\
-	bn_init(A, RLC_BN_SIZE);												\
+	bn_init(A, BN_SIZE);													\
 
 #endif
 
@@ -171,7 +192,15 @@ typedef bn_st *bn_t;
 #define bn_new_size(A, D)													\
 	A = (bn_t)calloc(1, sizeof(bn_st));										\
 	if (A == NULL) {														\
-		RLC_THROW(ERR_NO_MEMORY);												\
+		THROW(ERR_NO_MEMORY);												\
+	}																		\
+	bn_init(A, D);															\
+
+#elif ALLOC == STATIC
+#define bn_new_size(A, D)													\
+	A = (bn_t)alloca(sizeof(bn_st));										\
+	if (A != NULL) {														\
+		(A)->dp = NULL;														\
 	}																		\
 	bn_init(A, D);															\
 
@@ -196,6 +225,13 @@ typedef bn_st *bn_t;
 	if (A != NULL) {														\
 		bn_clean(A);														\
 		free(A);															\
+		A = NULL;															\
+	}
+
+#elif ALLOC == STATIC
+#define bn_free(A)															\
+	if (A != NULL) {														\
+		bn_clean(A);														\
 		A = NULL;															\
 	}
 
@@ -268,7 +304,7 @@ typedef bn_st *bn_t;
  * @param[in] A				- the multiple precision integer to reduce.
  * @param[in] ...			- the modulus and an optional argument.
  */
-#define bn_mod(C, A, ...)	RLC_CAT(bn_mod, RLC_OPT(__VA_ARGS__))(C, A, __VA_ARGS__)
+#define bn_mod(C, A, ...)	CAT(bn_mod, OPT(__VA_ARGS__))(C, A, __VA_ARGS__)
 
 /**
  * Reduces a multiple precision integer modulo another integer. This macro
@@ -290,8 +326,8 @@ typedef bn_st *bn_t;
 #endif
 
 /**
- * Reduces a multiple precision integer modulo a positive integer using
- * Montgomery reduction. Computes c = a * u^(-1) (mod m).
+ * Reduces a multiple precision integer modulo a modulus using Montgomery
+ * reduction. Computes c = a * u^(-1) (mod m).
  *
  * @param[out] C			- the result.
  * @param[in] A				- the multiple precision integer to reduce.
@@ -440,7 +476,7 @@ void bn_neg(bn_t c, const bn_t a);
  * Returns the sign of a multiple precision integer.
  *
  * @param[in] a				- the multiple precision integer.
- * @return RLC_POS if the argument is positive and RLC_NEG otherwise.
+ * @return BN_POS if the argument is positive and BN_NEG otherwise.
  */
 int bn_sign(const bn_t a);
 
@@ -513,7 +549,7 @@ void bn_get_dig(dig_t *digit, const bn_t a);
  * Assigns a small positive constant to a multiple precision integer.
  *
  * The constant must fit on a multiple precision digit, or dig_t type using
- * only the number of bits specified on RLC_DIG.
+ * only the number of bits specified on BN_DIGIT.
  *
  * @param[out] a			- the result.
  * @param[in] digit			- the constant to assign.
@@ -532,7 +568,7 @@ void bn_set_2b(bn_t a, int b);
  * Assigns a random value to a multiple precision integer.
  *
  * @param[out] a			- the multiple precision integer to assign.
- * @param[in] sign			- the sign to be assigned (RLC_NEG or RLC_POS).
+ * @param[in] sign			- the sign to be assigned (BN_NEG or BN_POS).
  * @param[in] bits			- the number of bits.
  */
 void bn_rand(bn_t a, int sign, int bits);
@@ -651,7 +687,7 @@ void bn_write_raw(dig_t *raw, int len, const bn_t a);
  *
  * @param[in] a				- the first multiple precision integer.
  * @param[in] b				- the second multiple precision integer.
- * @return RLC_LT if a < b, RLC_EQ if a == b and RLC_GT if a > b.
+ * @return CMP_LT if a < b, CMP_EQ if a == b and CMP_GT if a > b.
  */
 int bn_cmp_abs(const bn_t a, const bn_t b);
 
@@ -661,7 +697,7 @@ int bn_cmp_abs(const bn_t a, const bn_t b);
  *
  * @param[in] a				- the multiple precision integer.
  * @param[in] b				- the digit.
- * @return RLC_LT if a < b, RLC_EQ if a == b and RLC_GT if a > b.
+ * @return CMP_LT if a < b, CMP_EQ if a == b and CMP_GT if a > b.
  */
 int bn_cmp_dig(const bn_t a, dig_t b);
 
@@ -671,7 +707,7 @@ int bn_cmp_dig(const bn_t a, dig_t b);
  *
  * @param[in] a				- the first multiple precision integer.
  * @param[in] b				- the second multiple precision integer.
- * @return RLC_LT if a < b, RLC_EQ if a == b and RLC_GT if a > b.
+ * @return CMP_LT if a < b, CMP_EQ if a == b and CMP_GT if a > b.
  */
 int bn_cmp(const bn_t a, const bn_t b);
 
@@ -857,17 +893,6 @@ void bn_div_dig(bn_t c, const bn_t a, dig_t b);
 void bn_div_rem_dig(bn_t c, dig_t *d, const bn_t a, const dig_t b);
 
 /**
- * Computes the modular inverse of a multiple precision integer. Computes c such
- * that a*c mod b = 1.
- *
- * @param[out] c 			- the result.
- * @param[in] a				- the element to invert.
- * param[in] b				- the modulus.
- *
- */
-void bn_mod_inv(bn_t c, const bn_t a, const bn_t b);
-
-/**
  * Reduces a multiple precision integer modulo a power of 2. Computes
  * c = a mod 2^b.
  *
@@ -887,7 +912,7 @@ void bn_mod_2b(bn_t c, const bn_t a, int b);
 void bn_mod_dig(dig_t *c, const bn_t a, dig_t b);
 
 /**
- * Reduces a multiple precision integer modulo an integer using straightforward
+ * Reduces a multiple precision integer modulo a modulus using straightforward
  * division.
  *
  * @param[out] c			- the result.
@@ -906,7 +931,7 @@ void bn_mod_basic(bn_t c, const bn_t a, const bn_t m);
 void bn_mod_pre_barrt(bn_t u, const bn_t m);
 
 /**
- * Reduces a multiple precision integer modulo a positive integer using Barrett
+ * Reduces a multiple precision integer modulo a modulus using Barrett
  * reduction.
  *
  * @param[out] c			- the result.
@@ -945,8 +970,8 @@ void bn_mod_monty_conv(bn_t c, const bn_t a, const bn_t m);
 void bn_mod_monty_back(bn_t c, const bn_t a, const bn_t m);
 
 /**
- * Reduces a multiple precision integer modulo a positive integer using
- * Montgomery reduction with Schoolbook multiplication.
+ * Reduces a multiple precision integer modulo a modulus using Montgomery
+ * reduction with Schoolbook multiplication.
  *
  * @param[out] c			- the result.
  * @param[in] a				- the multiple precision integer to reduce.
@@ -956,8 +981,8 @@ void bn_mod_monty_back(bn_t c, const bn_t a, const bn_t m);
 void bn_mod_monty_basic(bn_t c, const bn_t a, const bn_t m, const bn_t u);
 
 /**
- * Reduces a multiple precision integer modulo a positive integer using
- * Montgomery reduction with Comba multiplication.
+ * Reduces a multiple precision integer modulo a modulus using Montgomery
+ * reduction with Comba multiplication.
  *
  * @param[out] c			- the result.
  * @param[in] a				- the multiple precision integer to reduce.
@@ -975,8 +1000,8 @@ void bn_mod_monty_comba(bn_t c, const bn_t a, const bn_t m, const bn_t u);
 void bn_mod_pre_pmers(bn_t u, const bn_t m);
 
 /**
- * Reduces a multiple precision integer modulo a positive integer using
- * pseudo-Mersenne modular reduction.
+ * Reduces a multiple precision integer modulo a modulus using Pseudo-Mersenne
+ * modular reduction.
  *
  * @param[out] c			- the result.
  * @param[in] a				- the multiple precision integer to reduce.
@@ -986,8 +1011,8 @@ void bn_mod_pre_pmers(bn_t u, const bn_t m);
 void bn_mod_pmers(bn_t c, const bn_t a, const bn_t m, const bn_t u);
 
 /**
- * Exponentiates a multiple precision integer modulo a positive integer using
- * the binary method.
+ * Exponentiates a multiple precision integer modulo a modulus using the binary
+ * method.
  *
  * @param[out] c			- the result.
  * @param[in] a				- the basis.
@@ -997,8 +1022,8 @@ void bn_mod_pmers(bn_t c, const bn_t a, const bn_t m, const bn_t u);
 void bn_mxp_basic(bn_t c, const bn_t a, const bn_t b, const bn_t m);
 
 /**
- * Exponentiates a multiple precision integer modulo a positive integer using
- * the sliding window method.
+ * Exponentiates a multiple precision integer modulo a modulus using the
+ * sliding window method.
  *
  * @param[out] c			- the result.
  * @param[in] a				- the basis.
@@ -1008,8 +1033,8 @@ void bn_mxp_basic(bn_t c, const bn_t a, const bn_t b, const bn_t m);
 void bn_mxp_slide(bn_t c, const bn_t a, const bn_t b, const bn_t m);
 
 /**
- * Exponentiates a multiple precision integer modulo a positive integer using
- * the constant-time Montgomery powering ladder method.
+ * Exponentiates a multiple precision integer modulo a modulus using a
+ * constant-time Montgomery powering ladder method.
  *
  * @param[out] c			- the result.
  * @param[in] a				- the basis.
@@ -1019,8 +1044,8 @@ void bn_mxp_slide(bn_t c, const bn_t a, const bn_t b, const bn_t m);
 void bn_mxp_monty(bn_t c, const bn_t a, const bn_t b, const bn_t m);
 
 /**
- * Exponentiates a multiple precision integer by a small power modulo a positive
- * integer using the binary method.
+ * Exponentiates a multiple precision integer by a small power modulo a modulus
+ * using the binary method.
  *
  * @param[out] c			- the result.
  * @param[in] a				- the basis.
@@ -1385,4 +1410,4 @@ void bn_rec_jsf(int8_t *jsf, int *len, const bn_t k, const bn_t l);
 void bn_rec_glv(bn_t k0, bn_t k1, const bn_t k, const bn_t n, const bn_t v1[],
 		const bn_t v2[]);
 
-#endif /* !RLC_BN_H */
+#endif /* !RELIC_BN_H */

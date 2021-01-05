@@ -1,24 +1,23 @@
 /*
  * RELIC is an Efficient LIbrary for Cryptography
- * Copyright (C) 2007-2020 RELIC Authors
+ * Copyright (C) 2007-2017 RELIC Authors
  *
  * This file is part of RELIC. RELIC is legal property of its developers,
  * whose names are not listed here. Please refer to the COPYRIGHT file
  * for contact information.
  *
- * RELIC is free software; you can redistribute it and/or modify it under the
- * terms of the version 2.1 (or later) of the GNU Lesser General Public License
- * as published by the Free Software Foundation; or version 2.0 of the Apache
- * License as published by the Apache Software Foundation. See the LICENSE files
- * for more details.
+ * RELIC is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * RELIC is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the LICENSE files for more details.
+ * RELIC is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public or the
- * Apache License along with RELIC. If not, see <https://www.gnu.org/licenses/>
- * or <https://www.apache.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with RELIC. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -29,8 +28,8 @@
  * @ingroup eb
  */
 
-#include "relic_core.h"
-#include "relic_fb_low.h"
+#include <relic_core.h>
+#include <relic_fb_low.h>
 
 /*============================================================================*/
 /* Private definitions                                                        */
@@ -50,16 +49,16 @@
  */
 static void eb_mul_ltnaf_imp(eb_t r, const eb_t p, const bn_t k) {
 	int i, l, n;
-	int8_t tnaf[RLC_FB_BITS + 8], u;
+	int8_t tnaf[FB_BITS + 8], u;
 	eb_t t[1 << (EB_WIDTH - 2)];
 
-	if (eb_curve_opt_a() == RLC_ZERO) {
+	if (eb_curve_opt_a() == OPT_ZERO) {
 		u = -1;
 	} else {
 		u = 1;
 	}
 
-	RLC_TRY {
+	TRY {
 		/* Prepare the precomputation table. */
 		for (i = 0; i < (1 << (EB_WIDTH - 2)); i++) {
 			eb_null(t[i]);
@@ -70,7 +69,7 @@ static void eb_mul_ltnaf_imp(eb_t r, const eb_t p, const bn_t k) {
 
 		/* Compute the w-TNAF representation of k. */
 		l = sizeof(tnaf);
-		bn_rec_tnaf(tnaf, &l, k, u, RLC_FB_BITS, EB_WIDTH);
+		bn_rec_tnaf(tnaf, &l, k, u, FB_BITS, EB_WIDTH);
 
 		n = tnaf[l - 1];
 		if (n > 0) {
@@ -92,14 +91,14 @@ static void eb_mul_ltnaf_imp(eb_t r, const eb_t p, const bn_t k) {
 		}
 		/* Convert r to affine coordinates. */
 		eb_norm(r, r);
-		if (bn_sign(k) == RLC_NEG) {
+		if (bn_sign(k) == BN_NEG) {
 			eb_neg(r, r);
 		}
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		/* Free the precomputation table. */
 		for (i = 0; i < (1 << (EB_WIDTH - 2)); i++) {
 			eb_free(t[i]);
@@ -121,17 +120,17 @@ static void eb_mul_ltnaf_imp(eb_t r, const eb_t p, const bn_t k) {
  */
 static void eb_mul_lnaf_imp(eb_t r, const eb_t p, const bn_t k) {
 	int i, l, n;
-	int8_t naf[RLC_FB_BITS + 1];
+	int8_t naf[FB_BITS + 1];
 	eb_t t[1 << (EB_WIDTH - 2)];
 
-	RLC_TRY {
+	TRY {
 		/* Prepare the precomputation table. */
 		for (i = 0; i < (1 << (EB_WIDTH - 2)); i++) {
 			eb_null(t[i]);
 			eb_new(t[i]);
 			eb_set_infty(t[i]);
 			fb_set_dig(t[i]->z, 1);
-			t[i]->coord = BASIC;
+			t[i]->norm = 1;
 		}
 
 		/* Compute the precomputation table. */
@@ -159,14 +158,14 @@ static void eb_mul_lnaf_imp(eb_t r, const eb_t p, const bn_t k) {
 		}
 		/* Convert r to affine coordinates. */
 		eb_norm(r, r);
-		if (bn_sign(k) == RLC_NEG) {
+		if (bn_sign(k) == BN_NEG) {
 			eb_neg(r, r);
 		}
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		/* Free the precomputation table. */
 		for (i = 0; i < (1 << (EB_WIDTH - 2)); i++) {
 			eb_free(t[i]);
@@ -191,16 +190,16 @@ static void eb_mul_lnaf_imp(eb_t r, const eb_t p, const bn_t k) {
  */
 static void eb_mul_rtnaf_imp(eb_t r, const eb_t p, const bn_t k) {
 	int i, l, n;
-	int8_t tnaf[RLC_FB_BITS + 8], u;
+	int8_t tnaf[FB_BITS + 8], u;
 	eb_t t[1 << (EB_WIDTH - 2)];
 
-	if (eb_curve_opt_a() == RLC_ZERO) {
+	if (eb_curve_opt_a() == OPT_ZERO) {
 		u = -1;
 	} else {
 		u = 1;
 	}
 
-	RLC_TRY {
+	TRY {
 		/* Prepare the precomputation table. */
 		for (i = 0; i < (1 << (EB_WIDTH - 2)); i++) {
 			eb_null(t[i]);
@@ -210,7 +209,7 @@ static void eb_mul_rtnaf_imp(eb_t r, const eb_t p, const bn_t k) {
 
 		/* Compute the w-TNAF representation of k. */
 		l = sizeof(tnaf);
-		bn_rec_tnaf(tnaf, &l, k, u, RLC_FB_BITS, EB_WIDTH);
+		bn_rec_tnaf(tnaf, &l, k, u, FB_BITS, EB_WIDTH);
 
 		eb_copy(r, p);
 		for (i = 0; i < l; i++) {
@@ -453,7 +452,7 @@ static void eb_mul_rtnaf_imp(eb_t r, const eb_t p, const bn_t k) {
 
 		/* Add accumulators */
 		for (i = 1; i < (1 << (EB_WIDTH - 2)); i++) {
-			if (r->coord == BASIC) {
+			if (r->norm) {
 				eb_add(r, t[i], r);
 			} else {
 				eb_add(r, r, t[i]);
@@ -461,14 +460,14 @@ static void eb_mul_rtnaf_imp(eb_t r, const eb_t p, const bn_t k) {
 		}
 		/* Convert r to affine coordinates. */
 		eb_norm(r, r);
-		if (bn_sign(k) == RLC_NEG) {
+		if (bn_sign(k) == BN_NEG) {
 			eb_neg(r, r);
 		}
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		/* Free the precomputation table. */
 		for (i = 0; i < (1 << (EB_WIDTH - 2)); i++) {
 			eb_free(t[i]);
@@ -490,10 +489,10 @@ static void eb_mul_rtnaf_imp(eb_t r, const eb_t p, const bn_t k) {
  */
 static void eb_mul_rnaf_imp(eb_t r, const eb_t p, const bn_t k) {
 	int i, l, n;
-	int8_t naf[RLC_FB_BITS + 1];
+	int8_t naf[FB_BITS + 1];
 	eb_t t[1 << (EB_WIDTH - 2)];
 
-	RLC_TRY {
+	TRY {
 		/* Prepare the accumulator table. */
 		for (i = 0; i < (1 << (EB_WIDTH - 2)); i++) {
 			eb_null(t[i]);
@@ -579,7 +578,7 @@ static void eb_mul_rnaf_imp(eb_t r, const eb_t p, const bn_t k) {
 
 		/* Add accumulators */
 		for (i = 1; i < (1 << (EB_WIDTH - 2)); i++) {
-			if (r->coord == BASIC) {
+			if (r->norm) {
 				eb_add(r, t[i], r);
 			} else {
 				eb_add(r, r, t[i]);
@@ -587,14 +586,14 @@ static void eb_mul_rnaf_imp(eb_t r, const eb_t p, const bn_t k) {
 		}
 		/* Convert r to affine coordinates. */
 		eb_norm(r, r);
-		if (bn_sign(k) == RLC_NEG) {
+		if (bn_sign(k) == BN_NEG) {
 			eb_neg(r, r);
 		}
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		/* Free the accumulator table. */
 		for (i = 0; i < (1 << (EB_WIDTH - 2)); i++) {
 			eb_free(t[i]);
@@ -621,7 +620,7 @@ void eb_mul_basic(eb_t r, const eb_t p, const bn_t k) {
 
 	eb_null(t);
 
-	RLC_TRY {
+	TRY {
 		eb_new(t);
 
 		eb_copy(t, p);
@@ -633,14 +632,14 @@ void eb_mul_basic(eb_t r, const eb_t p, const bn_t k) {
 		}
 
 		eb_norm(r, t);
-		if (bn_sign(k) == RLC_NEG) {
+		if (bn_sign(k) == BN_NEG) {
 			eb_neg(r, r);
 		}
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		eb_free(t);
 	}
 }
@@ -650,18 +649,15 @@ void eb_mul_basic(eb_t r, const eb_t p, const bn_t k) {
 #if EB_MUL == LODAH || !defined(STRIP)
 
 void eb_mul_lodah(eb_t r, const eb_t p, const bn_t k) {
-	int bits, i, j;
+	int i, t;
 	dv_t x1, z1, x2, z2, r1, r2, r3, r4, r5;
 	const dig_t *b;
-	bn_t t, n;
 
 	if (bn_is_zero(k)) {
 		eb_set_infty(r);
 		return;
 	}
 
-	bn_null(n);
-	bn_null(t);
 	dv_null(x1);
 	dv_null(z1);
 	dv_null(x2);
@@ -672,9 +668,7 @@ void eb_mul_lodah(eb_t r, const eb_t p, const bn_t k) {
 	dv_null(r4);
 	dv_null(r5);
 
-	RLC_TRY {
-		bn_new(n);
-		bn_new(t);
+	TRY {
 		dv_new(x1);
 		dv_new(z1);
 		dv_new(x2);
@@ -685,28 +679,22 @@ void eb_mul_lodah(eb_t r, const eb_t p, const bn_t k) {
 		dv_new(r4);
 		dv_new(r5);
 
+		fb_copy(x1, p->x);
+		fb_zero(z1);
+		fb_set_bit(z1, 0, 1);
 		fb_sqr(z2, p->x);
 		fb_sqr(x2, z2);
-		dv_zero(r5, 2 * RLC_FB_DIGS);
+		dv_zero(r5, 2 * FB_DIGS);
 
 		b = eb_curve_get_b();
-		eb_curve_get_ord(n);
-		bits = bn_bits(n);
-
-		bn_abs(t, k);
-		bn_add(t, t, n);
-		bn_add(n, t, n);
-		dv_swap_cond(t->dp, n->dp, RLC_MAX(t->used, n->used),
-			bn_get_bit(t, bits) == 0);
-		t->used = RLC_SEL(t->used, n->used, bn_get_bit(t, bits) == 0);
 
 		switch (eb_curve_opt_b()) {
-			case RLC_ZERO:
+			case OPT_ZERO:
 				break;
-			case RLC_ONE:
+			case OPT_ONE:
 				fb_add_dig(x2, x2, (dig_t)1);
 				break;
-			case RLC_TINY:
+			case OPT_DIGIT:
 				fb_add_dig(x2, x2, b[0]);
 				break;
 			default:
@@ -714,53 +702,46 @@ void eb_mul_lodah(eb_t r, const eb_t p, const bn_t k) {
 				break;
 		}
 
-		/* Blind both points independently. */
-		fb_rand(z1);
-		fb_mul(x1, z1, p->x);
-		fb_rand(r1);
-		fb_mul(z2, z2, r1);
-		fb_mul(x2, x2, r1);
-
-		for (i = bits - 1; i >= 0; i--) {
-			j = bn_get_bit(t, i);
+		for (i = bn_bits(k) - 2; i >= 0; i--) {
 			fb_mul(r1, x1, z2);
 			fb_mul(r2, x2, z1);
 			fb_add(r3, r1, r2);
 			fb_muln_low(r4, r1, r2);
-			dv_swap_cond(x1, x2, RLC_FB_DIGS, j ^ 1);
-			dv_swap_cond(z1, z2, RLC_FB_DIGS, j ^ 1);
+			t = bn_get_bit(k, i);
+			dv_swap_cond(x1, x2, FB_DIGS, t ^ 1);
+			dv_swap_cond(z1, z2, FB_DIGS, t ^ 1);
 			fb_sqr(z1, r3);
 			fb_muln_low(r1, z1, p->x);
-			fb_addd_low(x1, r1, r4, 2 * RLC_FB_DIGS);
+			fb_addd_low(x1, r1, r4, 2 * FB_DIGS);
 			fb_rdcn_low(x1, x1);
 			fb_sqr(r1, z2);
 			fb_sqr(r2, x2);
 			fb_mul(z2, r1, r2);
 			switch (eb_curve_opt_b()) {
-				case RLC_ZERO:
+				case OPT_ZERO:
 					fb_sqr(x2, r2);
 					break;
-				case RLC_ONE:
+				case OPT_ONE:
 					fb_add(r1, r1, r2);
 					fb_sqr(x2, r1);
 					break;
-				case RLC_TINY:
+				case OPT_DIGIT:
 					fb_sqr(r1, r1);
 					fb_sqrl_low(x2, r2);
 					fb_mul1_low(r5, r1, b[0]);
-					fb_addd_low(x2, x2, r5, RLC_FB_DIGS + 1);
+					fb_addd_low(x2, x2, r5, FB_DIGS + 1);
 					fb_rdcn_low(x2, x2);
 					break;
 				default:
 					fb_sqr(r1, r1);
 					fb_sqrl_low(x2, r2);
 					fb_muln_low(r5, r1, b);
-					fb_addd_low(x2, x2, r5, 2 * RLC_FB_DIGS);
+					fb_addd_low(x2, x2, r5, 2 * FB_DIGS);
 					fb_rdcn_low(x2, x2);
 					break;
 			}
-			dv_swap_cond(x1, x2, RLC_FB_DIGS, j ^ 1);
-			dv_swap_cond(z1, z2, RLC_FB_DIGS, j ^ 1);
+			dv_swap_cond(x1, x2, FB_DIGS, t ^ 1);
+			dv_swap_cond(z1, z2, FB_DIGS, t ^ 1);
 		}
 
 		if (fb_is_zero(z1)) {
@@ -770,7 +751,8 @@ void eb_mul_lodah(eb_t r, const eb_t p, const bn_t k) {
 			if (fb_is_zero(z2)) {
 				fb_copy(r->x, p->x);
 				fb_add(r->y, p->x, p->y);
-				fb_set_dig(r->z, 1);
+				fb_zero(r->z);
+				fb_set_bit(r->z, 0, 1);
 			} else {
 				/* r3 = z1 * z2. */
 				fb_mul(r3, z1, z2);
@@ -807,21 +789,21 @@ void eb_mul_lodah(eb_t r, const eb_t p, const bn_t k) {
 
 				fb_copy(r->x, x2);
 				fb_copy(r->y, z2);
-				fb_set_dig(r->z, 1);
+				fb_zero(r->z);
+				fb_set_bit(r->z, 0, 1);
+
+				r->norm = 1;
 			}
 		}
 
-		r->coord = BASIC;
-		if (bn_sign(k) == RLC_NEG) {
+		if (bn_sign(k) == BN_NEG) {
 			eb_neg(r, r);
 		}
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
-		bn_free(n);
-		bn_free(t);
+	FINALLY {
 		dv_free(x1);
 		dv_free(z1);
 		dv_free(x2);
@@ -877,7 +859,7 @@ void eb_mul_rwnaf(eb_t r, const eb_t p, const bn_t k) {
 #if defined(EB_MIXED) && defined(STRIP)
 	/* It is impossible to run a right-to-left algorithm using ordinary curves
 	 * and only mixed additions. */
-	RLC_THROW(ERR_NO_CONFIG);
+	THROW(ERR_NO_CONFIG);
 #else
 	eb_mul_rnaf_imp(r, p, k);
 #endif
@@ -890,7 +872,7 @@ void eb_mul_rwnaf(eb_t r, const eb_t p, const bn_t k) {
 
 void eb_mul_halve(eb_t r, const eb_t p, const bn_t k) {
 	int i, j, l, trc, cof;
-	int8_t naf[RLC_FB_BITS + 1] = { 0 }, *_k;
+	int8_t naf[FB_BITS + 1] = { 0 }, *_k;
 	eb_t q, s, t[1 << (EB_WIDTH - 2)];
 	bn_t n, m;
 	fb_t u, v, w, z;
@@ -912,7 +894,7 @@ void eb_mul_halve(eb_t r, const eb_t p, const bn_t k) {
 	fb_null(w);
 	fb_null(z);
 
-	RLC_TRY {
+	TRY {
 		bn_new(n);
 		bn_new(m);
 		eb_new(q);
@@ -950,7 +932,7 @@ void eb_mul_halve(eb_t r, const eb_t p, const bn_t k) {
 		eb_curve_get_cof(n);
 
 		/* Test if curve has a cofactor bigger than 2. */
-		if (bn_cmp_dig(n, 2) == RLC_GT) {
+		if (bn_cmp_dig(n, 2) == CMP_GT) {
 			cof = 1;
 		} else {
 			cof = 0;
@@ -963,7 +945,7 @@ void eb_mul_halve(eb_t r, const eb_t p, const bn_t k) {
 			fb_srt(u, eb_curve_get_a());
 			fb_slv(v, u);
 
-			bn_rand(n, RLC_POS, l);
+			bn_rand(n, BN_POS, l);
 
 			for (i = l - 1; i >= 0; i--, _k--) {
 				j = *_k;
@@ -998,7 +980,7 @@ void eb_mul_halve(eb_t r, const eb_t p, const bn_t k) {
 					fb_mul(w, w, z);
 					fb_srt(s->x, w);
 					fb_set_dig(s->z, 1);
-					s->coord = HALVE;
+					s->norm = 2;
 				}
 				eb_copy(q, s);
 			}
@@ -1047,10 +1029,10 @@ void eb_mul_halve(eb_t r, const eb_t p, const bn_t k) {
 			}
 		}
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		/* Free the precomputation table. */
 		for (i = 0; i < (1 << (EB_WIDTH - 2)); i++) {
 			eb_free(t[i]);
@@ -1076,15 +1058,15 @@ void eb_mul_gen(eb_t r, const bn_t k) {
 
 	eb_null(g);
 
-	RLC_TRY {
+	TRY {
 		eb_new(g);
 		eb_curve_get_gen(g);
 		eb_mul(r, g, k);
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		eb_free(g);
 	}
 #endif
@@ -1100,7 +1082,7 @@ void eb_mul_dig(eb_t r, const eb_t p, dig_t k) {
 
 	eb_null(t);
 
-	RLC_TRY {
+	TRY {
 		eb_new(t);
 
 		eb_copy(t, p);
@@ -1113,10 +1095,10 @@ void eb_mul_dig(eb_t r, const eb_t p, dig_t k) {
 
 		eb_norm(r, t);
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		eb_free(t);
 	}
 }

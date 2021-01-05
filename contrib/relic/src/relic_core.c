@@ -1,24 +1,23 @@
 /*
  * RELIC is an Efficient LIbrary for Cryptography
- * Copyright (C) 2007-2020 RELIC Authors
+ * Copyright (C) 2007-2017 RELIC Authors
  *
  * This file is part of RELIC. RELIC is legal property of its developers,
  * whose names are not listed here. Please refer to the COPYRIGHT file
  * for contact information.
  *
- * RELIC is free software; you can redistribute it and/or modify it under the
- * terms of the version 2.1 (or later) of the GNU Lesser General Public License
- * as published by the Free Software Foundation; or version 2.0 of the Apache
- * License as published by the Apache Software Foundation. See the LICENSE files
- * for more details.
+ * RELIC is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * RELIC is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the LICENSE files for more details.
+ * RELIC is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public or the
- * Apache License along with RELIC. If not, see <https://www.gnu.org/licenses/>
- * or <https://www.apache.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with RELIC. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -33,56 +32,41 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "relic_core.h"
-#include "relic_multi.h"
-#include "relic_rand.h"
-#include "relic_types.h"
-#include "relic_err.h"
-#include "relic_arch.h"
-#include "relic_fp.h"
-#include "relic_fb.h"
-#include "relic_ep.h"
-#include "relic_eb.h"
-#include "relic_cp.h"
-#include "relic_pp.h"
-
-/*============================================================================*/
-/* Private definitions                                                        */
-/*============================================================================*/
-
-/** Error message respective to ERR_NO_MEMORY. */
-#define MSG_NO_MEMORY 		"not enough memory"
-/** Error message respective to ERR_PRECISION. */
-#define MSG_NO_PRECI 		"insufficient precision"
-/** Error message respective to ERR_NO FILE. */
-#define MSG_NO_FILE			"file not found"
-/** Error message respective to ERR_NO_READ. */
-#define MSG_NO_READ			"can't read bytes from file"
-/** Error message respective to ERR_NO_VALID. */
-#define MSG_NO_VALID		"invalid value passed as input"
-/** Error message respective to ERR_NO_BUFFER. */
-#define MSG_NO_BUFFER		"insufficient buffer capacity"
-/** Error message respective to ERR_NO_FIELD. */
-#define MSG_NO_FIELD		"no finite field supported at this security level"
-/** Error message respective to ERR_NO_CURVE. */
-#define MSG_NO_CURVE		"no curve supported at this security level"
-/** Error message respective to ERR_NO_CONFIG. */
-#define MSG_NO_CONFIG		"invalid library configuration"
+#include <relic_core.h>
+#include <relic_rand.h>
+#include <relic_types.h>
+#include <relic_err.h>
+#include <relic_arch.h>
+#include <relic_fp.h>
+#include <relic_fb.h>
+#include <relic_ep.h>
+#include <relic_eb.h>
+#include <relic_cp.h>
+#include <relic_pp.h>
 
 /*============================================================================*/
 /* Public definitions                                                         */
 /*============================================================================*/
 
 /**
- * Default library context.
+ * If multi-threading is enabled, assigns each thread a local copy of the data.
  */
-#if MULTI
-rlc_thread ctx_t first_ctx;
+#if MULTI == PTHREAD
+#define thread 	__thread
 #else
-static ctx_t first_ctx;
+#define thread /* */
 #endif
 
-//[!CHIA_EDIT_START]
+/**
+ * Default library context.
+ */
+thread ctx_t first_ctx;
+
+/**
+ * Active library context.
+ */
+thread ctx_t *core_ctx = NULL;
+
 #if MULTI != RELIC_NONE
 /*
  * Initializer function to call for every thread's context
@@ -90,18 +74,19 @@ static ctx_t first_ctx;
 void (*core_thread_initializer)(void* init_ptr) = NULL;
 void* core_init_ptr = NULL;
 #endif
-//[!CHIA_EDIT_END]
 
-#if MULTI
-rlc_thread ctx_t *core_ctx = NULL;
-#else
-static ctx_t *core_ctx = NULL;
+#if MULTI == OPENMP
+#pragma omp threadprivate(first_ctx, core_ctx)
 #endif
 
 int core_init(void) {
 	if (core_ctx == NULL) {
 		core_ctx = &(first_ctx);
 	}
+
+#if defined(CHECK) && defined(TRACE)
+	core_ctx->trace = 0;
+#endif
 
 #ifdef CHECK
 	core_ctx->reason[ERR_NO_MEMORY] = MSG_NO_MEMORY;
@@ -116,13 +101,17 @@ int core_init(void) {
 	core_ctx->last = NULL;
 #endif /* CHECK */
 
+#if ALLOC == STATIC
+	core_ctx->next = 0;
+#endif
+
 #ifdef OVERH
 	core_ctx->over = 0;
 #endif
 
-	core_ctx->code = RLC_OK;
+	core_ctx->code = STS_OK;
 
-	RLC_TRY {
+	TRY {
 		arch_init();
 		rand_init();
 #ifdef WITH_FP
@@ -130,6 +119,9 @@ int core_init(void) {
 #endif
 #ifdef WITH_FB
 		fb_poly_init();
+#endif
+#ifdef WITH_FT
+		ft_poly_init();
 #endif
 #ifdef WITH_EP
 		ep_curve_init();
@@ -143,14 +135,12 @@ int core_init(void) {
 #ifdef WITH_PP
 		pp_map_init();
 #endif
-#ifdef WITH_PC
-		pc_core_init();
-#endif
-	} RLC_CATCH_ANY {
-		return RLC_ERR;
+	}
+	CATCH_ANY {
+		return STS_ERR;
 	}
 
-	return RLC_OK;
+	return STS_OK;
 }
 
 int core_clean(void) {
@@ -160,6 +150,9 @@ int core_clean(void) {
 #endif
 #ifdef WITH_FB
 	fb_poly_clean();
+#endif
+#ifdef WITH_FT
+	ft_poly_clean();
 #endif
 #ifdef WITH_EP
 	ep_curve_clean();
@@ -173,22 +166,18 @@ int core_clean(void) {
 #ifdef WITH_PP
 	pp_map_clean();
 #endif
-#ifdef WITH_PC
-	pc_core_clean();
-#endif
 	arch_clean();
 	core_ctx = NULL;
-	return RLC_OK;
+	return STS_OK;
 }
 
 ctx_t *core_get(void) {
-//[!CHIA_EDIT_START]
 #if MULTI != RELIC_NONE
     if (core_ctx == NULL && core_thread_initializer != NULL) {
         core_thread_initializer(core_init_ptr);
     }
 #endif
-//[!CHIA_EDIT_END]
+
 	return core_ctx;
 }
 
@@ -196,11 +185,9 @@ void core_set(ctx_t *ctx) {
 	core_ctx = ctx;
 }
 
-//[!CHIA_EDIT_START]
 #if MULTI != RELIC_NONE
 void core_set_thread_initializer(void(*init)(void *init_ptr), void* init_ptr) {
     core_thread_initializer = init;
     core_init_ptr = init_ptr;
 }
 #endif
-//[!CHIA_EDIT_END]

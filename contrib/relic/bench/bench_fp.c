@@ -1,24 +1,23 @@
 /*
  * RELIC is an Efficient LIbrary for Cryptography
- * Copyright (C) 2007-2020 RELIC Authors
+ * Copyright (C) 2007-2017 RELIC Authors
  *
  * This file is part of RELIC. RELIC is legal property of its developers,
  * whose names are not listed here. Please refer to the COPYRIGHT file
  * for contact information.
  *
- * RELIC is free software; you can redistribute it and/or modify it under the
- * terms of the version 2.1 (or later) of the GNU Lesser General Public License
- * as published by the Free Software Foundation; or version 2.0 of the Apache
- * License as published by the Apache Software Foundation. See the LICENSE files
- * for more details.
+ * RELIC is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * RELIC is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the LICENSE files for more details.
+ * RELIC is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public or the
- * Apache License along with RELIC. If not, see <https://www.gnu.org/licenses/>
- * or <https://www.apache.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with RELIC. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -31,8 +30,8 @@
 
 #include <stdio.h>
 
-#include "relic.h"
-#include "relic_bench.h"
+#include <relic.h>
+#include <relic_bench.h>
 
 static void memory(void) {
 	fp_t a[BENCH];
@@ -53,8 +52,8 @@ static void memory(void) {
 }
 
 static void util(void) {
-	char str[2 * RLC_FP_BYTES + 1];
-	uint8_t bin[RLC_FP_BYTES];
+	char str[2 * FP_BYTES + 1];
+	uint8_t bin[FP_BYTES];
 	fp_t a, b;
 
 	fp_null(a);
@@ -83,13 +82,13 @@ static void util(void) {
 
 	BENCH_BEGIN("fp_get_bit") {
 		fp_rand(a);
-		BENCH_ADD(fp_get_bit(a, RLC_DIG / 2));
+		BENCH_ADD(fp_get_bit(a, FP_DIGIT / 2));
 	}
 	BENCH_END;
 
 	BENCH_BEGIN("fp_set_bit") {
 		fp_rand(a);
-		BENCH_ADD(fp_set_bit(a, RLC_DIG / 2, 1));
+		BENCH_ADD(fp_set_bit(a, FP_DIGIT / 2, 1));
 	}
 	BENCH_END;
 
@@ -186,7 +185,7 @@ static void arith(void) {
 	fp_new(f[0]);
 	fp_new(f[1]);
 
-	dv_zero(d, RLC_DV_DIGS);
+	dv_zero(d, DV_DIGS);
 
 	BENCH_BEGIN("fp_add") {
 		fp_rand(a);
@@ -212,13 +211,6 @@ static void arith(void) {
 	}
 	BENCH_END;
 #endif
-
-	BENCH_BEGIN("fp_add_dig (1)") {
-		fp_rand(a);
-		fp_rand(b);
-		BENCH_ADD(fp_add_dig(c, a, 1));
-	}
-	BENCH_END;
 
 	BENCH_BEGIN("fp_add_dig") {
 		fp_rand(a);
@@ -251,13 +243,6 @@ static void arith(void) {
 	}
 	BENCH_END;
 #endif
-
-	BENCH_BEGIN("fp_sub_dig (1)") {
-		fp_rand(a);
-		fp_rand(b);
-		BENCH_ADD(fp_sub_dig(c, a, 1));
-	}
-	BENCH_END;
 
 	BENCH_BEGIN("fp_sub_dig") {
 		fp_rand(a);
@@ -414,21 +399,21 @@ static void arith(void) {
 
 	BENCH_BEGIN("fp_lsh") {
 		fp_rand(a);
-		a[RLC_FP_DIGS - 1] = 0;
-		BENCH_ADD(fp_lsh(c, a, RLC_DIG / 2));
+		a[FP_DIGS - 1] = 0;
+		BENCH_ADD(fp_lsh(c, a, FP_DIGIT / 2));
 	}
 	BENCH_END;
 
 	BENCH_BEGIN("fp_rsh") {
 		fp_rand(a);
-		a[RLC_FP_DIGS - 1] = 0;
-		BENCH_ADD(fp_rsh(c, a, RLC_FP_BITS / 2));
+		a[FP_DIGS - 1] = 0;
+		BENCH_ADD(fp_rsh(c, a, FP_BITS / 2));
 	}
 	BENCH_END;
 
 	BENCH_BEGIN("fp_rdc") {
 		fp_rand(a);
-		fp_lsh(d, a, RLC_FP_BITS);
+		fp_lsh(d, a, FP_BITS);
 		BENCH_ADD(fp_rdc(c, d));
 	}
 	BENCH_END;
@@ -436,7 +421,7 @@ static void arith(void) {
 #if FP_RDC == BASIC || !defined(STRIP)
 	BENCH_BEGIN("fp_rdc_basic") {
 		fp_rand(a);
-		fp_lsh(d, a, RLC_FP_BITS);
+		fp_lsh(d, a, FP_BITS);
 		BENCH_ADD(fp_rdc_basic(c, d));
 	}
 	BENCH_END;
@@ -445,7 +430,7 @@ static void arith(void) {
 #if FP_RDC == MONTY || !defined(STRIP)
 	BENCH_BEGIN("fp_rdc_monty") {
 		fp_rand(a);
-		fp_lsh(d, a, RLC_FP_BITS);
+		fp_lsh(d, a, FP_BITS);
 		BENCH_ADD(fp_rdc_monty(c, d));
 	}
 	BENCH_END;
@@ -453,7 +438,7 @@ static void arith(void) {
 #if FP_MUL == BASIC || !defined(STRIP)
 	BENCH_BEGIN("fp_rdc_monty_basic") {
 		fp_rand(a);
-		fp_lsh(d, a, RLC_FP_BITS);
+		fp_lsh(d, a, FP_BITS);
 		BENCH_ADD(fp_rdc_monty_basic(c, d));
 	}
 	BENCH_END;
@@ -462,7 +447,7 @@ static void arith(void) {
 #if FP_MUL == COMBA || !defined(STRIP)
 	BENCH_BEGIN("fp_rdc_monty_comba") {
 		fp_rand(a);
-		fp_lsh(d, a, RLC_FP_BITS);
+		fp_lsh(d, a, FP_BITS);
 		BENCH_ADD(fp_rdc_monty_comba(c, d));
 	}
 	BENCH_END;
@@ -473,7 +458,7 @@ static void arith(void) {
 	if (fp_prime_get_sps(NULL) != NULL) {
 		BENCH_BEGIN("fp_rdc_quick") {
 			fp_rand(a);
-			fp_lsh(d, a, RLC_FP_BITS);
+			fp_lsh(d, a, FP_BITS);
 			BENCH_ADD(fp_rdc_quick(c, d));
 		}
 		BENCH_END;
@@ -518,14 +503,6 @@ static void arith(void) {
 	BENCH_END;
 #endif
 
-#if FP_INV == DIVST || !defined(STRIP)
-	BENCH_BEGIN("fp_inv_divst") {
-		fp_rand(a);
-		BENCH_ADD(fp_inv_divst(c, a));
-	}
-	BENCH_END;
-#endif
-
 #if FP_INV == LOWER || !defined(STRIP)
 	BENCH_BEGIN("fp_inv_lower") {
 		fp_rand(a);
@@ -543,7 +520,7 @@ static void arith(void) {
 
 	BENCH_BEGIN("fp_exp") {
 		fp_rand(a);
-		bn_rand(e, RLC_POS, RLC_FP_BITS);
+		bn_rand(e, BN_POS, FP_BITS);
 		BENCH_ADD(fp_exp(c, a, e));
 	}
 	BENCH_END;
@@ -551,7 +528,7 @@ static void arith(void) {
 #if FP_EXP == BASIC || !defined(STRIP)
 	BENCH_BEGIN("fp_exp_basic") {
 		fp_rand(a);
-		bn_rand(e, RLC_POS, RLC_FP_BITS);
+		bn_rand(e, BN_POS, FP_BITS);
 		BENCH_ADD(fp_exp_basic(c, a, e));
 	}
 	BENCH_END;
@@ -560,7 +537,7 @@ static void arith(void) {
 #if FP_EXP == SLIDE || !defined(STRIP)
 	BENCH_BEGIN("fp_exp_slide") {
 		fp_rand(a);
-		bn_rand(e, RLC_POS, RLC_FP_BITS);
+		bn_rand(e, BN_POS, FP_BITS);
 		BENCH_ADD(fp_exp_slide(c, a, e));
 	}
 	BENCH_END;
@@ -569,7 +546,7 @@ static void arith(void) {
 #if FP_EXP == MONTY || !defined(STRIP)
 	BENCH_BEGIN("fp_exp_monty") {
 		fp_rand(a);
-		bn_rand(e, RLC_POS, RLC_FP_BITS);
+		bn_rand(e, BN_POS, FP_BITS);
 		BENCH_ADD(fp_exp_monty(c, a, e));
 	}
 	BENCH_END;
@@ -583,13 +560,13 @@ static void arith(void) {
 	BENCH_END;
 
 	BENCH_BEGIN("fp_prime_conv") {
-		bn_rand(e, RLC_POS, RLC_FP_BITS);
+		bn_rand(e, BN_POS, FP_BITS);
 		BENCH_ADD(fp_prime_conv(a, e));
 	}
 	BENCH_END;
 
 	BENCH_BEGIN("fp_prime_conv_dig") {
-		bn_rand(e, RLC_POS, RLC_FP_BITS);
+		bn_rand(e, BN_POS, FP_BITS);
 		BENCH_ADD(fp_prime_conv_dig(a, e->dp[0]));
 	}
 	BENCH_END;
@@ -610,7 +587,7 @@ static void arith(void) {
 }
 
 int main(void) {
-	if (core_init() != RLC_OK) {
+	if (core_init() != STS_OK) {
 		core_clean();
 		return 1;
 	}

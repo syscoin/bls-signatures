@@ -1,24 +1,23 @@
 /*
  * RELIC is an Efficient LIbrary for Cryptography
- * Copyright (C) 2007-2020 RELIC Authors
+ * Copyright (C) 2007-2017 RELIC Authors
  *
  * This file is part of RELIC. RELIC is legal property of its developers,
  * whose names are not listed here. Please refer to the COPYRIGHT file
  * for contact information.
  *
- * RELIC is free software; you can redistribute it and/or modify it under the
- * terms of the version 2.1 (or later) of the GNU Lesser General Public License
- * as published by the Free Software Foundation; or version 2.0 of the Apache
- * License as published by the Apache Software Foundation. See the LICENSE files
- * for more details.
+ * RELIC is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * RELIC is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the LICENSE files for more details.
+ * RELIC is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public or the
- * Apache License along with RELIC. If not, see <https://www.gnu.org/licenses/>
- * or <https://www.apache.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with RELIC. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -34,11 +33,11 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include "relic_core.h"
-#include "relic_conf.h"
-#include "relic_err.h"
+#include <relic_core.h>
+#include <relic_conf.h>
+#include <relic_err.h>
 
-#if defined(VERBS) && OPSYS == LINUX && HAVE_EXECINFO_H
+#if defined(VERBS) && OPSYS == LINUX
 #include <execinfo.h>
 #endif
 
@@ -66,7 +65,7 @@ void err_full_msg(const char *function, const char *file, int line,
 		fprintf(stderr, "\nERROR in %s() at %s,%d: %s.\n", function, file, line,
 				ctx->reason[error]);
 
-#if OPSYS == LINUX && HAVE_BACKTRACE && HAVE_BACKTRACE_SYMBOLS 
+#if OPSYS == LINUX
 		void *trace[100];
 		char **symbols;
 		int n;
@@ -101,6 +100,6 @@ void err_get_msg(err_t *e, char **msg) {
 int err_get_code(void) {
 	ctx_t *ctx = core_get();
 	int r = ctx->code;
-	ctx->code = RLC_OK;
+	ctx->code = STS_OK;
 	return r;
 }

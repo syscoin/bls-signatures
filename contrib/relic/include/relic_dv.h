@@ -1,24 +1,23 @@
 /*
  * RELIC is an Efficient LIbrary for Cryptography
- * Copyright (C) 2007-2020 RELIC Authors
+ * Copyright (C) 2007-2017 RELIC Authors
  *
  * This file is part of RELIC. RELIC is legal property of its developers,
  * whose names are not listed here. Please refer to the COPYRIGHT file
  * for contact information.
  *
- * RELIC is free software; you can redistribute it and/or modify it under the
- * terms of the version 2.1 (or later) of the GNU Lesser General Public License
- * as published by the Free Software Foundation; or version 2.0 of the Apache
- * License as published by the Apache Software Foundation. See the LICENSE files
- * for more details.
+ * RELIC is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * RELIC is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the LICENSE files for more details.
+ * RELIC is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public or the
- * Apache License along with RELIC. If not, see <https://www.gnu.org/licenses/>
- * or <https://www.apache.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with RELIC. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -34,39 +33,36 @@
  * @ingroup dv
  */
 
-#ifndef RLC_DV_H
-#define RLC_DV_H
+#ifndef RELIC_DV_H
+#define RELIC_DV_H
 
-#include "relic_bn.h"
-#include "relic_conf.h"
-#include "relic_types.h"
-#include "relic_util.h"
-#include "relic_label.h"
+#include <relic_bn.h>
+#include <relic_conf.h>
+#include <relic_types.h>
+#include <relic_util.h>
+#include <relic_label.h>
 
 /*============================================================================*/
 /* Constant definitions                                                       */
 /*============================================================================*/
 
 /**
- * Size in bits of the largest field element.
+ * Size in digits of a squaring result in a prime field.
  */
 #ifdef WITH_FP
-
-#ifdef WITH_FB
-#define RLC_DV_MAX		(RLC_MAX(FP_PRIME, FB_POLYN))
-#else /* !WITH_FB */
-#define RLC_DV_MAX		(FP_PRIME)
+#define DV_FP	(2 * ((int)((FP_PRIME)/(DIGIT) + (FP_PRIME % DIGIT > 0))) + 1)
+#else
+#define DV_FP	(0)
 #endif
 
-#else /* !WITH_FP */
-
+/**
+ * Size in digits of a squaring result in a binary field.
+ */
 #ifdef WITH_FB
-#define RLC_DV_MAX		(FB_POLYN)
-#else /* !WITH_FB */
-#define RLC_DV_MAX		(0)
+#define DV_FB	(2 * ((int)((FB_POLYN)/(DIGIT) + (FB_POLYN % DIGIT > 0))))
+#else
+#define DV_FB	(0)
 #endif
-
-#endif /* WITH_FP */
 
 /**
  * Size in digits of a temporary vector.
@@ -74,12 +70,12 @@
  * A temporary vector has enough size to store a multiplication/squaring result
  * produced by any module.
  */
-#define RLC_DV_DIGS		(RLC_MAX(RLC_CEIL(RLC_DV_MAX, RLC_DIG), RLC_BN_SIZE))
+#define DV_DIGS		MAX(MAX(DV_FP, DV_FB), BN_SIZE)
 
 /**
  * Size in bytes of a temporary vector.
  */
-#define RLC_DV_BYTES	(RLC_DV_DIGS * (RLC_DIG / 8))
+#define DV_BYTES	(DV_DIGS * (DIGIT / 8))
 
 /*============================================================================*/
 /* Type definitions                                                           */
@@ -89,7 +85,7 @@
  * Represents a temporary double-precision digit vector.
  */
 #if ALLOC == AUTO
-typedef rlc_align dig_t dv_t[RLC_DV_DIGS + RLC_PAD(RLC_DV_BYTES)/(RLC_DIG / 8)];
+typedef relic_align dig_t dv_t[DV_DIGS + PADDING(DV_BYTES)/(DIGIT / 8)];
 #else
 typedef dig_t *dv_t;
 #endif
@@ -115,13 +111,15 @@ typedef dig_t *dv_t;
  * @param[out] A			- the double-precision result.
  */
 #if ALLOC == DYNAMIC
-#define dv_new(A)			dv_new_dynam(&(A), RLC_DV_DIGS)
+#define dv_new(A)			dv_new_dynam(&(A), DV_DIGS)
+#elif ALLOC == STATIC
+#define dv_new(A)			dv_new_statc(&(A), DV_DIGS)
 #elif ALLOC == AUTO
 #define dv_new(A)			/* empty */
 #elif ALLOC == STACK
 #define dv_new(A)															\
-	A = (dig_t *)alloca(RLC_DV_BYTES + RLC_PAD(RLC_DV_BYTES));				\
-	A = (dig_t *)RLC_ALIGN(A);												\
+	A = (dig_t *)alloca(DV_BYTES + PADDING(DV_BYTES));						\
+	A = (dig_t *)ALIGNED(A);												\
 
 #endif
 
@@ -132,6 +130,8 @@ typedef dig_t *dv_t;
  */
 #if ALLOC == DYNAMIC
 #define dv_free(A)			dv_free_dynam(&(A))
+#elif ALLOC == STATIC
+#define dv_free(A)			dv_free_statc(&(A))
 #elif ALLOC == AUTO
 #define dv_free(A)			(void)A
 #elif ALLOC == STACK
@@ -188,22 +188,12 @@ void dv_copy_cond(dig_t *c, const dig_t *a, int digits, dig_t cond);
 void dv_swap_cond(dig_t *c, dig_t *a, int digits, dig_t cond);
 
 /**
- * Returns the result of a comparison between two digit vectors.
- *
- * @param[in] a				- the first digit vector.
- * @param[in] b				- the second digit vector.
- * @param[in] size			- the length in digits of the vectors.
- * @return RLC_LT if a < b, RLC_EQ if a == b and RLC_GT if a > b.
- */
-int dv_cmp(const dig_t *a, const dig_t *b, int size);
-
-/**
  * Compares two digit vectors in constant time.
  *
  * @param[in] a				- the first digit vector.
  * @param[in] b				- the second digit vector.
  * @param[in] size			- the length in digits of the vectors.
- * @return RLC_EQ if they are equal and RLC_NE otherwise.
+ * @return CMP_EQ if they are equal and CMP_NE otherwise.
  */
 int dv_cmp_const(const dig_t *a, const dig_t *b, int size);
 
@@ -218,6 +208,8 @@ int dv_cmp_const(const dig_t *a, const dig_t *b, int size);
  */
 #if ALLOC == DYNAMIC
 void dv_new_dynam(dv_t *a, int digits);
+#elif ALLOC == STATIC
+void dv_new_statc(dv_t *a, int digits);
 #endif
 
 /**
@@ -227,6 +219,8 @@ void dv_new_dynam(dv_t *a, int digits);
  */
 #if ALLOC == DYNAMIC
 void dv_free_dynam(dv_t *a);
+#elif ALLOC == STATIC
+void dv_free_statc(dv_t *a);
 #endif
 
-#endif /* !RLC_DV_H */
+#endif /* !RELIC_DV_H */

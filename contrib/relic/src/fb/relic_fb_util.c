@@ -1,24 +1,23 @@
 /*
  * RELIC is an Efficient LIbrary for Cryptography
- * Copyright (C) 2007-2020 RELIC Authors
+ * Copyright (C) 2007-2017 RELIC Authors
  *
  * This file is part of RELIC. RELIC is legal property of its developers,
  * whose names are not listed here. Please refer to the COPYRIGHT file
  * for contact information.
  *
- * RELIC is free software; you can redistribute it and/or modify it under the
- * terms of the version 2.1 (or later) of the GNU Lesser General Public License
- * as published by the Free Software Foundation; or version 2.0 of the Apache
- * License as published by the Apache Software Foundation. See the LICENSE files
- * for more details.
+ * RELIC is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * RELIC is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the LICENSE files for more details.
+ * RELIC is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public or the
- * Apache License along with RELIC. If not, see <https://www.gnu.org/licenses/>
- * or <https://www.apache.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with RELIC. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -29,11 +28,11 @@
  * @ingroup fb
  */
 
-#include "relic_core.h"
-#include "relic_fb.h"
-#include "relic_fb_low.h"
-#include "relic_rand.h"
-#include "relic_util.h"
+#include <relic_core.h>
+#include <relic_fb.h>
+#include <relic_fb_low.h>
+#include <relic_rand.h>
+#include <relic_util.h>
 
 /*============================================================================*/
 /* Private definitions                                                        */
@@ -75,18 +74,30 @@ static int log_radix(int radix) {
 /*============================================================================*/
 
 void fb_copy(fb_t c, const fb_t a) {
-	dv_copy(c, a, RLC_FB_DIGS);
+	for (int i = 0; i < FB_DIGS; i++) {
+		c[i] = a[i];
+	}
+}
+
+void fb_neg(fb_t c, const fb_t a) {
+	for (int i = 0; i < FB_DIGS; i++) {
+		c[i] = a[i];
+	}
 }
 
 void fb_zero(fb_t a) {
-	dv_zero(a, RLC_FB_DIGS);
+	int i;
+
+	for (i = 0; i < FB_DIGS; i++, a++) {
+		*a = 0;
+	}
 }
 
 int fb_is_zero(const fb_t a) {
 	int i;
 	dig_t t = 0;
 
-	for (i = 0; i < RLC_FB_DIGS; i++) {
+	for (i = 0; i < FB_DIGS; i++) {
 		t |= a[i];
 	}
 
@@ -96,7 +107,7 @@ int fb_is_zero(const fb_t a) {
 int fb_get_bit(const fb_t a, int bit) {
 	int d;
 
-	RLC_RIP(bit, d, bit);
+	SPLIT(bit, d, bit, FB_DIG_LOG);
 
 	return (a[d] >> bit) & 1;
 }
@@ -105,7 +116,7 @@ void fb_set_bit(fb_t a, int bit, int value) {
 	int d;
 	dig_t mask;
 
-	RLC_RIP(bit, d, bit);
+	SPLIT(bit, d, bit, FB_DIG_LOG);
 
 	mask = (dig_t)1 << bit;
 
@@ -117,14 +128,14 @@ void fb_set_bit(fb_t a, int bit, int value) {
 }
 
 int fb_bits(const fb_t a) {
-	int i = RLC_FB_DIGS - 1;
+	int i = FB_DIGS - 1;
 
 	while (i >= 0 && a[i] == 0) {
 		i--;
 	}
 
 	if (i > 0) {
-		return (i << RLC_DIG_LOG) + util_bits_dig(a[i]);
+		return (i << FB_DIG_LOG) + util_bits_dig(a[i]);
 	} else {
 		return util_bits_dig(a[0]);
 	}
@@ -138,12 +149,12 @@ void fb_set_dig(fb_t c, dig_t a) {
 void fb_rand(fb_t a) {
 	int bits, digits;
 
-	rand_bytes((uint8_t *)a, RLC_FB_DIGS * sizeof(dig_t));
+	rand_bytes((uint8_t *)a, FB_DIGS * sizeof(dig_t));
 
-	RLC_RIP(bits, digits, RLC_FB_BITS);
+	SPLIT(bits, digits, FB_BITS, FB_DIG_LOG);
 	if (bits > 0) {
-		dig_t mask = RLC_MASK(bits);
-		a[RLC_FB_DIGS - 1] &= mask;
+		dig_t mask = MASK(bits);
+		a[FB_DIGS - 1] &= mask;
 	}
 }
 
@@ -152,7 +163,7 @@ void fb_print(const fb_t a) {
 
 	/* Suppress possible unused parameter warning. */
 	(void)a;
-	for (i = RLC_FB_DIGS - 1; i > 0; i--) {
+	for (i = FB_DIGS - 1; i > 0; i--) {
 		util_print_dig(a[i], 1);
 		util_print(" ");
 	}
@@ -167,20 +178,20 @@ int fb_size_str(const fb_t a, int radix) {
 	bn_null(t);
 
 	if (!valid_radix(radix)) {
-		RLC_THROW(ERR_NO_VALID);
+		THROW(ERR_NO_VALID);
 	}
 
-	RLC_TRY {
+	TRY {
 		bn_new(t);
 
-		bn_read_raw(t, a, RLC_FB_DIGS);
+		bn_read_raw(t, a, FB_DIGS);
 
 		digits = bn_size_str(t, radix);
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		bn_free(t);
 	}
 
@@ -196,15 +207,12 @@ void fb_read_str(fb_t a, const char *str, int len, int radix) {
 
 	l = log_radix(radix);
 	if (!valid_radix(radix)) {
-		RLC_THROW(ERR_NO_VALID);
+		THROW(ERR_NO_VALID);
 	}
 
 	j = 0;
-	while (j < len) {
-		if (str[j] == 0) {
-			break;
-		}
-		c = (char)((radix < 36) ? RLC_UPP(str[j]) : str[j]);
+	while (str[j] && j < len) {
+		c = (char)((radix < 36) ? TOUPPER(str[j]) : str[j]);
 		for (i = 0; i < 64; i++) {
 			if (c == util_conv_char(i)) {
 				break;
@@ -214,7 +222,7 @@ void fb_read_str(fb_t a, const char *str, int len, int radix) {
 		if (i < radix) {
 			carry = fb_lshb_low(a, a, l);
 			if (carry != 0) {
-				RLC_THROW(ERR_NO_BUFFER);
+				THROW(ERR_NO_BUFFER);
 			}
 			fb_add_dig(a, a, (dig_t)i);
 		} else {
@@ -233,13 +241,13 @@ void fb_write_str(char *str, int len, const fb_t a, int radix) {
 
 	l = fb_size_str(a, radix);
 	if (len < l) {
-		RLC_THROW(ERR_NO_BUFFER);
+		THROW(ERR_NO_BUFFER);
 	}
 	len = l;
 
 	l = log_radix(radix);
 	if (!valid_radix(radix)) {
-		RLC_THROW(ERR_NO_VALID)
+		THROW(ERR_NO_VALID)
 	}
 
 	if (fb_is_zero(a) == 1) {
@@ -248,7 +256,7 @@ void fb_write_str(char *str, int len, const fb_t a, int radix) {
 		return;
 	}
 
-	RLC_TRY {
+	TRY {
 		fb_new(t);
 		fb_copy(t, a);
 
@@ -273,10 +281,10 @@ void fb_write_str(char *str, int len, const fb_t a, int radix) {
 
 		str[len - 1] = '\0';
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		fb_free(t);
 	}
 }
@@ -286,21 +294,21 @@ void fb_read_bin(fb_t a, const uint8_t *bin, int len) {
 
 	bn_null(t);
 
-	if (len != RLC_FB_BYTES) {
-		RLC_THROW(ERR_NO_BUFFER);
+	if (len != FB_BYTES) {
+		THROW(ERR_NO_BUFFER);
 	}
 
-	RLC_TRY {
+	TRY {
 		bn_new(t);
 
 		bn_read_bin(t, bin, len);
 
 		fb_copy(a, t->dp);
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		bn_free(t);
 	}
 }
@@ -310,20 +318,20 @@ void fb_write_bin(uint8_t *bin, int len, const fb_t a) {
 
 	bn_null(t);
 
-	if (len != RLC_FB_BYTES) {
-		RLC_THROW(ERR_NO_BUFFER);
+	if (len != FB_BYTES) {
+		THROW(ERR_NO_BUFFER);
 	}
 
-	RLC_TRY {
+	TRY {
 		bn_new(t);
 
-		bn_read_raw(t, a, RLC_FB_DIGS);
+		bn_read_raw(t, a, FB_DIGS);
 
 		bn_write_bin(bin, len, t);
-	} RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	} CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		bn_free(t);
 	}
 }

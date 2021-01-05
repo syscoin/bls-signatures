@@ -1,24 +1,23 @@
 /*
  * RELIC is an Efficient LIbrary for Cryptography
- * Copyright (C) 2007-2020 RELIC Authors
+ * Copyright (C) 2007-2017 RELIC Authors
  *
  * This file is part of RELIC. RELIC is legal property of its developers,
  * whose names are not listed here. Please refer to the COPYRIGHT file
  * for contact information.
  *
- * RELIC is free software; you can redistribute it and/or modify it under the
- * terms of the version 2.1 (or later) of the GNU Lesser General Public License
- * as published by the Free Software Foundation; or version 2.0 of the Apache
- * License as published by the Apache Software Foundation. See the LICENSE files
- * for more details.
+ * RELIC is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * RELIC is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the LICENSE files for more details.
+ * RELIC is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public or the
- * Apache License along with RELIC. If not, see <https://www.gnu.org/licenses/>
- * or <https://www.apache.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with RELIC. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -30,9 +29,9 @@
  * @ingroup fp
  */
 
-#include "relic_core.h"
-#include "relic_fp_low.h"
-#include "relic_bn_low.h"
+#include <relic_core.h>
+#include <relic_fp_low.h>
+#include <relic_bn_low.h>
 
 /*============================================================================*/
 /* Private definitions                                                        */
@@ -63,7 +62,7 @@ static void fp_sqr_karat_imp(dv_t c, const fp_t a, int size, int level) {
 	dv_null(a0a0);
 	dv_null(a1a1);
 
-	RLC_TRY {
+	TRY {
 		/* Allocate the temp variables. */
 		dv_new(t0);
 		dv_new(t1);
@@ -139,10 +138,10 @@ static void fp_sqr_karat_imp(dv_t c, const fp_t a, int size, int level) {
 		c += 2 * (h1 + 1);
 		carry = bn_add1_low(c, c, carry, 2 * size - h - 2 * (h1 + 1));
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		dv_free(t0);
 		dv_free(t1);
 		dv_free(a0a0);
@@ -163,20 +162,20 @@ void fp_sqr_basic(fp_t c, const fp_t a) {
 
 	dv_null(t);
 
-	RLC_TRY {
+	TRY {
 		dv_new(t);
-		dv_zero(t, 2 * RLC_FP_DIGS);
+		dv_zero(t, 2 * FP_DIGS);
 
-		for (i = 0; i < RLC_FP_DIGS; i++) {
-			bn_sqra_low(t + (2 * i), a + i, RLC_FP_DIGS - i);
+		for (i = 0; i < FP_DIGS; i++) {
+			bn_sqra_low(t + (2 * i), a + i, FP_DIGS - i);
 		}
 
 		fp_rdc(c, t);
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		fp_free(t);
 	}
 }
@@ -190,16 +189,16 @@ void fp_sqr_comba(fp_t c, const fp_t a) {
 
 	dv_null(t);
 
-	RLC_TRY {
+	TRY {
 		dv_new(t);
 
 		fp_sqrn_low(t, a);
 
 		fp_rdc(c, t);
-	} RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	} CATCH_ANY {
+
 	}
-	RLC_FINALLY {
+	FINALLY {
 		fp_free(t);
 	}
 }
@@ -221,22 +220,22 @@ void fp_sqr_karat(fp_t c, const fp_t a) {
 
 	dv_null(t);
 
-	RLC_TRY {
+	TRY {
 		dv_new(t);
-		dv_zero(t, 2 * RLC_FP_DIGS);
+		dv_zero(t, 2 * FP_DIGS);
 
-		if (RLC_FP_DIGS > 1) {
-			fp_sqr_karat_imp(t, a, RLC_FP_DIGS, FP_KARAT);
+		if (FP_DIGS > 1) {
+			fp_sqr_karat_imp(t, a, FP_DIGS, FP_KARAT);
 		} else {
 			fp_sqrn_low(t, a);
 		}
 
 
 		fp_rdc(c, t);
-	} RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	} CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		dv_free(t);
 	}
 }

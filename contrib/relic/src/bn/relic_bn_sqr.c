@@ -1,24 +1,23 @@
 /*
  * RELIC is an Efficient LIbrary for Cryptography
- * Copyright (C) 2007-2020 RELIC Authors
+ * Copyright (C) 2007-2017 RELIC Authors
  *
  * This file is part of RELIC. RELIC is legal property of its developers,
  * whose names are not listed here. Please refer to the COPYRIGHT file
  * for contact information.
  *
- * RELIC is free software; you can redistribute it and/or modify it under the
- * terms of the version 2.1 (or later) of the GNU Lesser General Public License
- * as published by the Free Software Foundation; or version 2.0 of the Apache
- * License as published by the Apache Software Foundation. See the LICENSE files
- * for more details.
+ * RELIC is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * RELIC is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the LICENSE files for more details.
+ * RELIC is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public or the
- * Apache License along with RELIC. If not, see <https://www.gnu.org/licenses/>
- * or <https://www.apache.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with RELIC. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -30,8 +29,8 @@
  * @ingroup bn
  */
 
-#include "relic_core.h"
-#include "relic_bn_low.h"
+#include <relic_core.h>
+#include <relic_bn_low.h>
 
 /*============================================================================*/
 /* Private definitions                                                        */
@@ -62,7 +61,7 @@ static void bn_sqr_karat_imp(bn_t c, const bn_t a, int level) {
 	/* Compute half the digits of a or b. */
 	h = a->used >> 1;
 
-	RLC_TRY {
+	TRY {
 		/* Allocate the temp variables. */
 		bn_new(a0);
 		bn_new(a1);
@@ -124,23 +123,23 @@ static void bn_sqr_karat_imp(bn_t c, const bn_t a, int level) {
 		bn_sub(t, t, a0);
 
 		/* t = (a1 + a0)*(a1 + a0) - (a0*a0 + a1*a1) << h digits */
-		bn_lsh(t, t, h * RLC_DIG);
+		bn_lsh(t, t, h * BN_DIGIT);
 
 		/* t2 = a1 * b1 << 2*h digits */
-		bn_lsh(a1a1, a1a1, 2 * h * RLC_DIG);
+		bn_lsh(a1a1, a1a1, 2 * h * BN_DIGIT);
 
 		/* t = t + a0*a0 */
 		bn_add(t, t, a0a0);
 		/* c = t + a1*a1 */
 		bn_add(t, t, a1a1);
 
-		t->sign = RLC_POS;
+		t->sign = BN_POS;
 		bn_copy(c, t);
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		bn_free(a0);
 		bn_free(a1);
 		bn_free(a0a0);
@@ -165,7 +164,7 @@ void bn_sqr_basic(bn_t c, const bn_t a) {
 
 	digits = 2 * a->used;
 
-	RLC_TRY {
+	TRY {
 		bn_new_size(t, digits);
 		bn_zero(t);
 		t->used = digits;
@@ -174,14 +173,14 @@ void bn_sqr_basic(bn_t c, const bn_t a) {
 			bn_sqra_low(t->dp + (2 * i), a->dp + i, a->used - i);
 		}
 
-		t->sign = RLC_POS;
+		t->sign = BN_POS;
 		bn_trim(t);
 		bn_copy(c, t);
 	}
-	RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		bn_free(t);
 	}
 }
@@ -198,20 +197,20 @@ void bn_sqr_comba(bn_t c, const bn_t a) {
 
 	digits = 2 * a->used;
 
-	RLC_TRY {
+	TRY {
 		/* We need a temporary variable so that c can be a or b. */
 		bn_new_size(t, digits);
 		t->used = digits;
 
 		bn_sqrn_low(t->dp, a->dp, a->used);
 
-		t->sign = RLC_POS;
+		t->sign = BN_POS;
 		bn_trim(t);
 		bn_copy(c, t);
-	} RLC_CATCH_ANY {
-		RLC_THROW(ERR_CAUGHT);
+	} CATCH_ANY {
+		THROW(ERR_CAUGHT);
 	}
-	RLC_FINALLY {
+	FINALLY {
 		bn_free(t);
 	}
 }

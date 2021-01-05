@@ -1,24 +1,23 @@
 /*
  * RELIC is an Efficient LIbrary for Cryptography
- * Copyright (C) 2007-2020 RELIC Authors
+ * Copyright (C) 2007-2017 RELIC Authors
  *
  * This file is part of RELIC. RELIC is legal property of its developers,
  * whose names are not listed here. Please refer to the COPYRIGHT file
  * for contact information.
  *
- * RELIC is free software; you can redistribute it and/or modify it under the
- * terms of the version 2.1 (or later) of the GNU Lesser General Public License
- * as published by the Free Software Foundation; or version 2.0 of the Apache
- * License as published by the Apache Software Foundation. See the LICENSE files
- * for more details.
+ * RELIC is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * RELIC is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the LICENSE files for more details.
+ * RELIC is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public or the
- * Apache License along with RELIC. If not, see <https://www.gnu.org/licenses/>
- * or <https://www.apache.org/licenses/>.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with RELIC. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -31,8 +30,8 @@
 
 #include <stdio.h>
 
-#include "relic.h"
-#include "relic_bench.h"
+#include <relic.h>
+#include <relic_bench.h>
 
 static void memory1(void) {
 	g1_t a[BENCH];
@@ -54,7 +53,7 @@ static void memory1(void) {
 
 static void util1(void) {
 	g1_t p, q;
-	uint8_t bin[2 * RLC_PC_BYTES + 1];
+	uint8_t bin[2 * PC_BYTES + 1];
 	int l;
 
 	g1_null(p);
@@ -151,13 +150,13 @@ static void util1(void) {
 }
 
 static void arith1(void) {
-	g1_t p, q, r, t[RLC_G1_TABLE];
+	g1_t p, q, r, t[RELIC_G1_TABLE];
 	bn_t k, l, n;
 
 	g1_null(p);
 	g1_null(q);
 	g1_null(r);
-	for (int i = 0; i < RLC_G1_TABLE; i++) {
+	for (int i = 0; i < RELIC_G1_TABLE; i++) {
 		g1_null(t[i]);
 	}
 
@@ -168,7 +167,7 @@ static void arith1(void) {
 	bn_new(n);
 	bn_new(l);
 
-	pc_get_ord(n);
+	g1_get_ord(n);
 
 	BENCH_BEGIN("g1_add") {
 		g1_rand(p);
@@ -209,7 +208,7 @@ static void arith1(void) {
 	BENCH_END;
 
 	BENCH_BEGIN("g1_mul") {
-		bn_rand(k, RLC_POS, bn_bits(n));
+		bn_rand(k, BN_POS, bn_bits(n));
 		bn_rand_mod(k, n);
 		g1_rand(p);
 		BENCH_ADD(g1_mul(q, p, k));
@@ -217,13 +216,13 @@ static void arith1(void) {
 	BENCH_END;
 
 	BENCH_BEGIN("g1_mul_gen") {
-		bn_rand(k, RLC_POS, bn_bits(n));
+		bn_rand(k, BN_POS, bn_bits(n));
 		bn_rand_mod(k, n);
 		BENCH_ADD(g1_mul_gen(q, k));
 	}
 	BENCH_END;
 
-	for (int i = 0; i < RLC_G1_TABLE; i++) {
+	for (int i = 0; i < RELIC_G1_TABLE; i++) {
 		g1_new(t[i]);
 	}
 
@@ -233,7 +232,7 @@ static void arith1(void) {
 	BENCH_END;
 
 	BENCH_BEGIN("g1_mul_fix") {
-		bn_rand(k, RLC_POS, bn_bits(n));
+		bn_rand(k, BN_POS, bn_bits(n));
 		bn_rand_mod(k, n);
 		g1_mul_pre(t, p);
 		BENCH_ADD(g1_mul_fix(q, (const g1_t *)t, k));
@@ -241,7 +240,7 @@ static void arith1(void) {
 	BENCH_END;
 
 	BENCH_BEGIN("g1_mul_sim") {
-		bn_rand(k, RLC_POS, bn_bits(n));
+		bn_rand(k, BN_POS, bn_bits(n));
 		bn_rand_mod(k, n);
 		bn_rand_mod(l, n);
 		g1_rand(p);
@@ -251,19 +250,11 @@ static void arith1(void) {
 	BENCH_END;
 
 	BENCH_BEGIN("g1_mul_sim_gen") {
-		bn_rand(k, RLC_POS, bn_bits(n));
+		bn_rand(k, BN_POS, bn_bits(n));
 		bn_rand_mod(k, n);
 		bn_rand_mod(l, n);
 		g1_rand(q);
 		BENCH_ADD(g1_mul_sim_gen(r, k, q, l));
-	}
-	BENCH_END;
-
-	BENCH_BEGIN("g1_mul_dig") {
-		bn_rand(k, RLC_POS, bn_bits(n));
-		bn_rand_mod(k, n);
-		g1_rand(p);
-		BENCH_ADD(g1_mul_dig(q, p, k->dp[0]));
 	}
 	BENCH_END;
 
@@ -278,7 +269,7 @@ static void arith1(void) {
 	bn_free(k);
 	bn_free(l);
 	bn_free(n);
-	for (int i = 0; i < RLC_G1_TABLE; i++) {
+	for (int i = 0; i < RELIC_G1_TABLE; i++) {
 		g1_free(t[i]);
 	}
 }
@@ -303,7 +294,7 @@ static void memory2(void) {
 
 static void util2(void) {
 	g2_t p, q;
-	uint8_t bin[4 * RLC_PC_BYTES + 1];
+	uint8_t bin[4 * PC_BYTES + 1];
 	int l;
 
 	g2_null(p);
@@ -403,13 +394,13 @@ static void util2(void) {
 }
 
 static void arith2(void) {
-	g2_t p, q, r, t[RLC_G2_TABLE];
+	g2_t p, q, r, t[RELIC_G1_TABLE];
 	bn_t k, l, n;
 
 	g2_null(p);
 	g2_null(q);
 	g2_null(r);
-	for (int i = 0; i < RLC_G2_TABLE; i++) {
+	for (int i = 0; i < RELIC_G1_TABLE; i++) {
 		g2_null(t[i]);
 	}
 
@@ -420,7 +411,7 @@ static void arith2(void) {
 	bn_new(n);
 	bn_new(l);
 
-	pc_get_ord(n);
+	g2_get_ord(n);
 
 	BENCH_BEGIN("g2_add") {
 		g2_rand(p);
@@ -461,7 +452,7 @@ static void arith2(void) {
 	BENCH_END;
 
 	BENCH_BEGIN("g2_mul") {
-		bn_rand(k, RLC_POS, bn_bits(n));
+		bn_rand(k, BN_POS, bn_bits(n));
 		bn_rand_mod(k, n);
 		g2_rand(p);
 		BENCH_ADD(g2_mul(q, p, k));
@@ -469,13 +460,13 @@ static void arith2(void) {
 	BENCH_END;
 
 	BENCH_BEGIN("g2_mul_gen") {
-		bn_rand(k, RLC_POS, bn_bits(n));
+		bn_rand(k, BN_POS, bn_bits(n));
 		bn_rand_mod(k, n);
 		BENCH_ADD(g2_mul_gen(q, k));
 	}
 	BENCH_END;
 
-	for (int i = 0; i < RLC_G1_TABLE; i++) {
+	for (int i = 0; i < RELIC_G1_TABLE; i++) {
 		g2_new(t[i]);
 	}
 
@@ -485,7 +476,7 @@ static void arith2(void) {
 	BENCH_END;
 
 	BENCH_BEGIN("g2_mul_fix") {
-		bn_rand(k, RLC_POS, bn_bits(n));
+		bn_rand(k, BN_POS, bn_bits(n));
 		bn_rand_mod(k, n);
 		g2_mul_pre(t, p);
 		BENCH_ADD(g2_mul_fix(q, t, k));
@@ -493,7 +484,7 @@ static void arith2(void) {
 	BENCH_END;
 
 	BENCH_BEGIN("g2_mul_sim") {
-		bn_rand(k, RLC_POS, bn_bits(n));
+		bn_rand(k, BN_POS, bn_bits(n));
 		bn_rand_mod(k, n);
 		bn_rand_mod(l, n);
 		g2_rand(p);
@@ -503,7 +494,7 @@ static void arith2(void) {
 	BENCH_END;
 
 	BENCH_BEGIN("g2_mul_sim_gen") {
-		bn_rand(k, RLC_POS, bn_bits(n));
+		bn_rand(k, BN_POS, bn_bits(n));
 		bn_rand_mod(k, n);
 		bn_rand_mod(l, n);
 		g2_rand(q);
@@ -511,18 +502,10 @@ static void arith2(void) {
 	}
 	BENCH_END;
 
-	BENCH_BEGIN("g2_mul_dig") {
-		bn_rand(k, RLC_POS, bn_bits(n));
-		bn_rand_mod(k, n);
-		g2_rand(p);
-		BENCH_ADD(g2_mul_dig(q, p, k->dp[0]));
-	}
-	BENCH_END;
-
 	BENCH_BEGIN("g2_map") {
 		uint8_t msg[5];
 		rand_bytes(msg, 5);
-		BENCH_ADD(g2_map(p, msg, 5));
+		BENCH_ADD(g2_map(p, msg, 5, 1));
 	} BENCH_END;
 
 	g2_free(p);
@@ -530,7 +513,7 @@ static void arith2(void) {
 	bn_free(k);
 	bn_free(l);
 	bn_free(n);
-	for (int i = 0; i < RLC_G1_TABLE; i++) {
+	for (int i = 0; i < RELIC_G1_TABLE; i++) {
 		g2_free(t[i]);
 	}
 }
@@ -555,7 +538,7 @@ static void memory(void) {
 
 static void util(void) {
 	gt_t a, b;
-	uint8_t bin[12 * RLC_PC_BYTES];
+	uint8_t bin[12 * PC_BYTES];
 	int l;
 
 	gt_null(a);
@@ -605,10 +588,21 @@ static void util(void) {
 		BENCH_ADD(gt_size_bin(a, 0));
 	} BENCH_END;
 
+	BENCH_BEGIN("gt_size_bin (1)") {
+		gt_rand(a);
+		BENCH_ADD(gt_size_bin(a, 1));
+	} BENCH_END;
+
 	BENCH_BEGIN("gt_write_bin (0)") {
 		gt_rand(a);
 		l = gt_size_bin(a, 0);
 		BENCH_ADD(gt_write_bin(bin, l, a, 0));
+	} BENCH_END;
+
+	BENCH_BEGIN("gt_write_bin (1)") {
+		gt_rand(a);
+		l = gt_size_bin(a, 1);
+		BENCH_ADD(gt_write_bin(bin, l, a, 1));
 	} BENCH_END;
 
 	BENCH_BEGIN("gt_read_bin (0)") {
@@ -618,29 +612,11 @@ static void util(void) {
 		BENCH_ADD(gt_read_bin(a, bin, l));
 	} BENCH_END;
 
-	if (ep_param_embed() == 12) {
-		BENCH_BEGIN("gt_size_bin (1)") {
-			gt_rand(a);
-			BENCH_ADD(gt_size_bin(a, 1));
-		} BENCH_END;
-
-		BENCH_BEGIN("gt_write_bin (1)") {
-			gt_rand(a);
-			l = gt_size_bin(a, 1);
-			BENCH_ADD(gt_write_bin(bin, l, a, 1));
-		} BENCH_END;
-
-		BENCH_BEGIN("gt_read_bin (1)") {
-			gt_rand(a);
-			l = gt_size_bin(a, 1);
-			gt_write_bin(bin, l, a, 1);
-			BENCH_ADD(gt_read_bin(a, bin, l));
-		} BENCH_END;
-	}
-
-	BENCH_BEGIN("gt_is_valid") {
+	BENCH_BEGIN("gt_read_bin (1)") {
 		gt_rand(a);
-		BENCH_ADD(gt_is_valid(a));
+		l = gt_size_bin(a, 1);
+		gt_write_bin(bin, l, a, 1);
+		BENCH_ADD(gt_read_bin(a, bin, l));
 	} BENCH_END;
 
 	gt_free(a);
@@ -649,14 +625,13 @@ static void util(void) {
 
 static void arith(void) {
 	gt_t a, b, c;
-	bn_t d, e, f;
+	bn_t d, e;
 
 	gt_new(a);
 	gt_new(b);
 	gt_new(c);
 	bn_new(d);
 	bn_new(e);
-	bn_new(f);
 
 	BENCH_BEGIN("gt_mul") {
 		gt_rand(a);
@@ -680,27 +655,9 @@ static void arith(void) {
 
 	BENCH_BEGIN("gt_exp") {
 		gt_rand(a);
-		pc_get_ord(d);
-		bn_rand_mod(e, d);
-		BENCH_ADD(gt_exp(c, a, e));
-	}
-	BENCH_END;
-
-	BENCH_BEGIN("gt_exp_sim") {
-		gt_rand(a);
-		gt_rand(b);
 		gt_get_ord(d);
 		bn_rand_mod(e, d);
-		bn_rand_mod(f, d);
-		BENCH_ADD(gt_exp_sim(c, a, e, b, f));
-	}
-	BENCH_END;
-
-	BENCH_BEGIN("gt_exp_dig") {
-		gt_rand(a);
-		pc_get_ord(d);
-		bn_rand(e, RLC_POS, bn_bits(d));
-		BENCH_ADD(gt_exp_dig(c, a, e->dp[0]));
+		BENCH_ADD(gt_exp(c, a, e));
 	}
 	BENCH_END;
 
@@ -709,7 +666,6 @@ static void arith(void) {
 	gt_free(c);
 	bn_free(d);
 	bn_free(e);
-	bn_free(f);
 }
 
 static void pairing(void) {
@@ -751,7 +707,7 @@ static void pairing(void) {
 }
 
 int main(void) {
-	if (core_init() != RLC_OK) {
+	if (core_init() != STS_OK) {
 		core_clean();
 		return 1;
 	}
@@ -759,8 +715,8 @@ int main(void) {
 	conf_print();
 	util_banner("Benchmarks for the PC module:", 0);
 
-	if (pc_param_set_any() != RLC_OK) {
-		RLC_THROW(ERR_NO_CURVE);
+	if (pc_param_set_any() != STS_OK) {
+		THROW(ERR_NO_CURVE);
 		core_clean();
 		return 0;
 	}
